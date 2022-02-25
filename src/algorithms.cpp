@@ -32,17 +32,29 @@ std::vector<std::pair<double, double>> wavefront(double start_lat, double start_
     auto graph_origin = g.get_origin();
     double cell_step = g.get_step();
 
-    // Check if the starting point is inside the desired region
-    if (start_lat < graph_origin.first or start_long < graph_origin.second or
-            (size_t)((start_lat - graph_origin.first) / cell_step) >= g.get_height() or
-            (size_t)((start_long - graph_origin.second) / cell_step) >= g.get_width()) {
-        std::cerr << "Error in the algorithm: start point is not inside the polygon..." << std::endl;
-        return path;
+
+    for (size_t i = 0; i < g.get_height(); i++) {
+      for (size_t j = 0; j < g.get_width(); j++) {
+        std::cout << (g(i, j) ? '#' : '.') << " ";
+      }
+      std::cout << std::endl;
     }
+
+
 
     // Calculate the start cell by start coordinates
     auto start_cell_col = (size_t)((start_long - graph_origin.second) / cell_step);
     auto start_cell_row = (size_t)((start_lat - graph_origin.first) / cell_step);
+
+    // Check if the starting point is inside the desired region
+    // TODO: remove this and find the closest point to drone's position instead
+    if (start_lat < graph_origin.first or start_long < graph_origin.second or
+            (size_t)((start_lat - graph_origin.first) / cell_step) >= g.get_height() or
+            (size_t)((start_long - graph_origin.second) / cell_step) >= g.get_width()) {
+        std::cerr << "Error in the  algorithm: start point is not inside the polygon..." << std::endl;
+        return path;
+    }
+
 
     // Run BFS as a first step of wavefront algorithm to fii in the "levels"
     std::unordered_set<std::pair<size_t, size_t>, pair_hash> visited;

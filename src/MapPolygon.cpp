@@ -3,39 +3,68 @@
 #include <iostream>
 #include "utils.hpp"
 #include <algorithm>
+#include <stdexcept>
 #include "Graph.hpp"
+#include <ros/ros.h>
 
-bool MapPolygon::load_polygon_from_file(const std::string &filename) {
+void MapPolygon::load_polygon_from_file(const std::string &filename) {
+    points_loaded = false;
+    bool edge_values_updated = false;
+    bool fly_zone_found = false;
+
     // Try to load the file with described polygon
     pugi::xml_document doc;
     pugi::xml_parse_result result = doc.load_file(filename.c_str());
     if (!result) {
-      return false;
-
+        throw kml_file_parse_error("Could not load kml file..");
     }
 
-    // Try to find the field with polygon points coordinates
-    auto polygon_coordinates = doc.child("kml").child("Document").child("Placemark").
-            child("Polygon").child("outerBoundaryIs").child("LinearRing");
-    if (polygon_coordinates.empty()) {
-        return false;
+    auto document = doc.child("kml").child("Document");
+    if (document.empty()) {
+        throw kml_file_parse_error("Could not find any polygon in the kml file.");
     }
 
-    // Iterate through polygons (in this implementation there should be just one polygon)
-    for (auto tool: polygon_coordinates) {
-        std::string coordinates = tool.text().as_string();
-        if (!add_points_from_string(coordinates)) {
-            return false;
+    for (auto placemark: document.children("Placemark")) {
+        auto placemark_polygon_points = get_points_from_string(
+                placemark.child("Polygon").child("outerBoundaryIs").child("LinearRing").child("coordinates").text().as_string());
+
+        for (auto &point: placemark_polygon_points) {
+            // Update smallest and biggest values
+            if (not edge_values_updated) {
+                edge_values_updated = true;
+                smallest_x = biggest_x = point.first;
+                smallest_y = biggest_y = point.second;
+            } else {
+                smallest_x = std::min(smallest_x, point.first);
+                biggest_x = std::max(biggest_x, point.first);
+                smallest_y = std::min(smallest_y, point.second);
+                biggest_y = std::max(biggest_y, point.second);
+            }
         }
+        if (placemark.child("name").text().as_string() == FLY_ZONE_PLACEMARK_NAME) {
+            fly_zone_found = true;
+            fly_zone_polygon_points = placemark_polygon_points;
+            if (fly_zone_polygon_points.empty()) {
+                throw kml_file_parse_error("Could not load fly zone polygon points");
+            }
+        } else if (placemark.child("name").text().as_string() == NO_FLY_ZONE_PLACEMARK_NAME) {
+            if (placemark_polygon_points.empty()) {
+                throw kml_file_parse_error("Could not load no fly zone polygon...");
+            }
+            std::cout << "Non fly zone" << std::endl;
+            no_fly_zone_polygons.push_back(placemark_polygon_points);
+        }
+        
     }
-    return true;
+    if (not fly_zone_found) {
+      throw kml_file_parse_error("Could not find fly zone in the kml file");
+    }
+    points_loaded = true;
 }
 
 
-bool MapPolygon::add_points_from_string(std::string kml_file_string) {
-    // Clear old point and set a flag that the data is not valid anymore
-    points_loaded = false;
-    polygon_points.clear();
+MapPolygon::polygon_t MapPolygon::get_points_from_string(std::string kml_file_string) {
+    polygon_t points;
 
     // Split the string by spaces and add each point to the vector of internal points
     size_t pos;
@@ -45,86 +74,73 @@ bool MapPolygon::add_points_from_string(std::string kml_file_string) {
         if (point_string.empty()) {
             continue;
         }
-        add_point(point_string);
+        points.push_back(string_to_point(point_string));
     }
-    return (points_loaded and polygon_points.size() > 2 and
-            polygon_points[0] == polygon_points[polygon_points.size() - 1]);
+    return points;
 }
 
-void MapPolygon::add_point(const std::string &point_string) {
+std::pair<double, double> MapPolygon::string_to_point(const std::string &point_string) {
     size_t coma_pos;
     std::pair<double, double> point;
     try {
         point.first = std::stod(point_string, &coma_pos);
         point.second = std::stod(point_string.substr(coma_pos + 1));
     } catch (std::invalid_argument &e) {
-        return;
+        throw kml_file_parse_error{"Could not convert string too coordinates..."};
     }
-
-    // If points were not loaded still, mark them as loaded and set initial values for smallest and biggest values
-    if (not points_loaded) {
-        points_loaded = true;
-        smallest_x = biggest_x = point.first;
-        smallest_y = biggest_y = point.second;
-    }
-
-    // Update smallest and biggest coordinates
-    polygon_points.push_back(point);
-    smallest_x = std::min(smallest_x, point.first);
-    smallest_y = std::min(smallest_y, point.second);
-    biggest_x = std::max(biggest_x, point.first);
-    biggest_y = std::max(biggest_y, point.second);
+    return point;
 }
 
 
 Graph MapPolygon::points_inside_polygon(double step) {
+
     Graph g(smallest_x, biggest_x, smallest_y, biggest_y, step);
     // Return the empty vector if the points are not still loaded or arguments are invalid
     if ((not points_loaded) or step < 0) {
         return g;
     }
-
-    // Find all the segments of the polygon
-    std::vector<hom_t> segments;
-    for (size_t i = 0; i < polygon_points.size() - 1; i++) {
-        hom_t p1 = {polygon_points[i].first, polygon_points[i].second, 1};
-        hom_t p2 = {polygon_points[i + 1].first, polygon_points[i + 1].second, 1};
-        segments.push_back(cross_product(p1, p2));
-    }
-
     // Iterate through each row of the grid
     for (int row = 0; row * step + smallest_y < biggest_y; row++) {
         double y = smallest_y + row * step;
+        // Now, for simplicity assume that boundaries of each zone (both fly and no-fly) never intersect
         std::vector<double> segments_intersection_x_coord;
         hom_t horizontal_line = {0, 1, -y};
 
-        // Find out all the points of intersection with the boundary segments. Can be done in a more efficient
-        // way if we remember the previous loop cycle information, but OK for now
-        for (size_t i = 0; i < segments.size(); i++) {
-            hom_t intersection_h = cross_product(segments[i], horizontal_line);
+        // TODO: rewrite this without copying of the code
+        // Find out all the x coordinates of points of the intersection of horizontal line with any zones boundaries
+        for (size_t i = 0; i < fly_zone_polygon_points.size() - 1; i++) {
+            auto intersection_x = segment_line_intersection(fly_zone_polygon_points[i], fly_zone_polygon_points[i + 1], horizontal_line).first;
+            if ((intersection_x <= fly_zone_polygon_points[i].first and
+                 intersection_x >= fly_zone_polygon_points[i + 1].first) or
+                (intersection_x <= fly_zone_polygon_points[i + 1].first and
+                 intersection_x >= fly_zone_polygon_points[i].first)) {
 
-            if (std::get<2>(intersection_h) != 0) {
-                double intersection_x = std::get<0>(intersection_h) / std::get<2>(intersection_h);
+                segments_intersection_x_coord.push_back(intersection_x);
+            }
+        }
 
-                if ((intersection_x <= polygon_points[i].first and intersection_x >= polygon_points[i + 1].first) or
-                        (intersection_x >= polygon_points[i].first and intersection_x <= polygon_points[i + 1].first)) {
+        // Find out all the intersections with no-fly zone polygons
+        for (auto &no_fly_zone_polygon: no_fly_zone_polygons) {
+            for (size_t i = 0; i < no_fly_zone_polygon.size() - 1; i++) {
+                auto intersection_x = segment_line_intersection(no_fly_zone_polygon[i], no_fly_zone_polygon[i + 1], horizontal_line).first;
+                if ((intersection_x <= no_fly_zone_polygon[i].first and
+                     intersection_x >= no_fly_zone_polygon[i + 1].first) or
+                    (intersection_x <= no_fly_zone_polygon[i + 1].first and
+                     intersection_x >= no_fly_zone_polygon[i].first)) {
 
                     segments_intersection_x_coord.push_back(intersection_x);
                 }
             }
         }
         // Sort all the x coordinates
-        // Now all the points inside the polygon are between intersection 0 and 1, 2 amd 3, 3 amd 4 and so on
+        // Now all the points inside the polygon are between intersection 0 and 1, 2 and 3, 3 and 4 and so on
         std::sort(segments_intersection_x_coord.begin(), segments_intersection_x_coord.end());
-
-        // Process only the even number of intersections for convenience.
-        // There is much trouble if the number of intersections is odd
         if (segments_intersection_x_coord.size() % 2 == 0 and !segments_intersection_x_coord.empty()) {
             size_t intersections_passed = 0;
             double x;
             for (int col = 0; (x = col * step + smallest_x) < biggest_x; col++) {
                 while (intersections_passed < segments_intersection_x_coord.size() and
-                segments_intersection_x_coord[intersections_passed] < x) {
+                       segments_intersection_x_coord[intersections_passed] < x) {
                     intersections_passed++;
                 }
                 if (intersections_passed % 2 == 1) {
@@ -132,6 +148,7 @@ Graph MapPolygon::points_inside_polygon(double step) {
                 }
             }
         }
+
     }
     return g;
 }

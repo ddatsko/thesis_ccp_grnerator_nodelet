@@ -6,11 +6,12 @@
 #include <std_msgs/String.h>
 #include "MapPolygon.hpp"
 #include "algorithms.hpp"
-#include <vector>
 #include <boost/shared_ptr.hpp>
+#include <vector>
+#include "utils.hpp"
 
-constexpr double METERS_IN_LAT_DEGREE = 111000;
-constexpr double METERS_ON_LON_DEGREE = 111000;
+long long METERS_IN_LON_DEGREE = 111000;
+long long METERS_IN_LAT_DEGREE = 111000;
 
 namespace trajectory_generatiion {
 
@@ -53,16 +54,20 @@ namespace trajectory_generatiion {
         m_transformer = mrs_lib::Transformer("TrajectoryGenerator", m_uav_name);
 
         MapPolygon polygon;
-        if (not polygon.load_polygon_from_file(m_kml_file_path)) {
-          ROS_ERROR("[TrajectoryGenerator]: KML files could not be loaded");
-          ros::shutdown();
-          return;
-        } else {
-          ROS_INFO("[TrajectoryGenerator]: successfully loaded polygon from KML file");
+        try {
+            polygon.load_polygon_from_file(m_kml_file_path);
+        } catch (kml_file_parse_error &e) {
+            ROS_ERROR_STREAM("[TrajectoryGenerator]: " << e.what());
+            ros::shutdown();
+            return;
         }
+
+        ROS_INFO("[TrajectoryGenerator]: successfully loaded polygon from KML file");
+
         // TODO: make the step parameter be loaded by the param loader, but converted to meters,
         // so it is more convenient to convert it to the drone altitude
-        Graph g = polygon.points_inside_polygon(0.00004);
+        Graph g = polygon.points_inside_polygon(0.000708);
+
         if (m_simulation) {
           std::vector<std::pair<double, double>> path_points = wavefront(m_simulation_start_lat, m_simulation_start_long, g);
           if (path_points.empty()) {
@@ -71,9 +76,14 @@ namespace trajectory_generatiion {
               return;
           }
           
-          auto path_to_follow = _generate_path_for_simulation_one_drone(path_points);
           
+ //         estimate_path_energy_consumption(path_points, 0.9, 4, 0.119, battery, 0.0215); 
+
+          ROS_INFO_STREAM("[TrajectoryGenerator]: Generated path of length " << path_points.size() << "  sending it to the drone"); 
+          auto path_to_follow = _generate_path_for_simulation_one_drone(path_points);
+
           mrs_msgs::PathSrv srv;
+          
           srv.request.path = path_to_follow;
           if (m_trajectory_generator_service_client.call(srv)) {
             if (not srv.response.success) {
@@ -124,7 +134,7 @@ mrs_msgs::Path TrajectoryGenerator::_generate_path_for_simulation_one_drone(std:
     mrs_msgs::Reference point_3d;
     point_3d.heading = 1;
     point_3d.position.x = (p.first * METERS_IN_LAT_DEGREE) - (m_simulation_start_lat * METERS_IN_LAT_DEGREE);
-    point_3d.position.y = (p.second * METERS_ON_LON_DEGREE) - (m_simulation_start_long * METERS_ON_LON_DEGREE);
+    point_3d.position.y = (p.second * METERS_IN_LON_DEGREE) - (m_simulation_start_long * METERS_IN_LON_DEGREE);
     point_3d.position.z = m_drones_altitude;
     points.push_back(point_3d);
   }

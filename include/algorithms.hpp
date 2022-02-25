@@ -14,4 +14,6 @@
  */
 std::vector<std::pair<double, double>> wavefront(double start_lat, double start_long, const Graph &g);
 
+
+
 #endif //MAP_TO_GRAPH_ALGORITHMS_HPP
