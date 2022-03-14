@@ -3,39 +3,104 @@
 //
 #include <iostream>
 #include "Graph.hpp"
+#include <algorithm>
+#include "utils.hpp"
 
-Graph::Graph(double smallest_x, double biggest_x, double smallest_y, double biggest_y, double step) :
-        smallest_x(smallest_x), smallest_y(smallest_y), step(step) {
 
-    height = (size_t)((biggest_y - smallest_y) / step) + 2;
-    width = (size_t)((biggest_x - smallest_x) / step) + 2;
-    vertices_matrix = std::vector<bool>(width * height, false);
+using pdd = std::pair<double, double>;
+
+Graph::Graph(const MapPolygon &map_polygon, double rotation_angle, double step): m_rotation_angle(rotation_angle), m_step(step) {
+
+    // Make the rotated map
+    auto map_polygon_rotated = map_polygon.rotated(m_rotation_angle);
+
+    // Get the smallest x and y coordinates of all the MapPolygon points
+    auto smallest = map_polygon_rotated.reduce_points([](const auto &p1, const auto &p2){return std::make_pair(std::min(p1.first, p2.first), std::min(p1.second, p2.second));});
+    auto biggest = map_polygon_rotated.reduce_points([](const auto &p1, const auto &p2){return std::make_pair(std::max(p1.first, p2.first), std::max(p1.second, p2.second));});
+    m_smallest_x = smallest.first; m_smallest_y = smallest.second;
+    double biggest_x = biggest.first, biggest_y = biggest.second;
+
+    m_width = static_cast<size_t>((biggest_x - m_smallest_x) / step) + 2;
+    m_height = static_cast<size_t>((biggest_y - m_smallest_y) / step) + 2;
+
+    m_vertices_matrix = std::vector<bool>(m_width * m_height, false);
+
+    double x, y;
+    // Iterate through each row of the grid
+    for (int row = 0; (y = row * step + m_smallest_y + (step / 2)) < biggest_y; row++) {
+        // Now, for simplicity assume that boundaries of each zone (both fly and no-fly) never intersect
+        std::vector<double> segments_intersection_x_coord;
+        hom_t horizontal_line = {0, 1, -y};
+
+        // TODO: rewrite this without copying of the code
+        // Find out all the x coordinates of points of the intersection of horizontal line with any zones boundaries
+        for (size_t i = 0; i < map_polygon_rotated.fly_zone_polygon_points.size() - 1; i++) {
+            auto intersection_x = segment_line_intersection(map_polygon_rotated.fly_zone_polygon_points[i], map_polygon_rotated.fly_zone_polygon_points[i + 1], horizontal_line).first;
+            if ((intersection_x <= map_polygon_rotated.fly_zone_polygon_points[i].first and
+                 intersection_x >= map_polygon_rotated.fly_zone_polygon_points[i + 1].first) or
+                (intersection_x <= map_polygon_rotated.fly_zone_polygon_points[i + 1].first and
+                 intersection_x >= map_polygon_rotated.fly_zone_polygon_points[i].first)) {
+
+                segments_intersection_x_coord.push_back(intersection_x);
+            }
+        }
+
+        // Find out all the intersections with no-fly zone polygons
+        for (auto &no_fly_zone_polygon: map_polygon_rotated.no_fly_zone_polygons) {
+            for (size_t i = 0; i < no_fly_zone_polygon.size() - 1; i++) {
+                auto intersection_x = segment_line_intersection(no_fly_zone_polygon[i], no_fly_zone_polygon[i + 1], horizontal_line).first;
+                if ((intersection_x <= no_fly_zone_polygon[i].first and
+                     intersection_x >= no_fly_zone_polygon[i + 1].first) or
+                    (intersection_x <= no_fly_zone_polygon[i + 1].first and
+                     intersection_x >= no_fly_zone_polygon[i].first)) {
+
+                    segments_intersection_x_coord.push_back(intersection_x);
+                }
+            }
+        }
+        // Sort all the x coordinates
+        // Now all the points inside the polygon are between intersection 0 and 1, 2 and 3, 3 and 4 and so on
+        std::sort(segments_intersection_x_coord.begin(), segments_intersection_x_coord.end());
+        if (segments_intersection_x_coord.size() % 2 == 0 and !segments_intersection_x_coord.empty()) {
+            size_t intersections_passed = 0;
+            for (int col = 0; (x = col * step + m_smallest_x + step / 2) < biggest_x; col++) {
+                while (intersections_passed < segments_intersection_x_coord.size() and
+                       segments_intersection_x_coord[intersections_passed] < x) {
+                    intersections_passed++;
+                }
+                if (intersections_passed % 2 == 1) {
+                    add_vertex(row, col);
+                }
+            }
+        }
+    }
+
 }
 
 bool Graph::operator()(size_t row, size_t col) const {
-    return vertices_matrix[row * width + col];
+    return m_vertices_matrix[row * m_width + col];
 }
 
 void Graph::add_vertex(int row, int col) {
-    vertices_matrix[row * width + col] = true;
-}
-
-void Graph::remove_vertex(int row, int col) {
-    vertices_matrix[row * width + col] = false;
+    m_vertices_matrix[row * m_width + col] = true;
 }
 
 size_t Graph::get_height() const {
-    return height;
+    return m_height;
 }
 
 size_t Graph::get_width() const {
-    return width;
+    return m_width;
 }
 
 double Graph::get_step() const {
-    return step;
+    return m_step;
 }
 
-std::pair<double, double> Graph::get_origin() const {
-    return {smallest_y, smallest_x};
+std::pair<double, double> Graph::get_point_coords(size_t row, size_t col) const {
+    // Calculate the coordinates of point and rotate it by the initial angle in the opposite direction
+    return rotate_point({static_cast<double>(col) * m_step + m_smallest_x + (m_step / 2),
+                         static_cast<double>(row) * m_step + m_smallest_y + (m_step / 2)}, -m_rotation_angle);
 }
+
+

@@ -4,16 +4,17 @@
 #include <vector>
 #include "Graph.hpp"
 
-/*!
- * Wavefront algorithm for one drone
- * @param start_lat Start latitude
- * @param start_long Start longitude
- * @param g Graph to use the algorithm on
- * @return Empty vector in case of bad arguments (e.g. start position is not in the graph),
- *         A sequence of (latitude, longitude) locations to be visited by the drone
- */
-std::vector<std::pair<double, double>> wavefront(double start_lat, double start_long, const Graph &g);
+using vpdd = std::vector<std::pair<double, double>>;
 
+
+/*!
+ * Calculate the sweeping path to cover the graph g
+ * NOTE: If the area to cover is not a convex polygon, the algorithm will produce not a full coverage path
+ * @param g Graph that needs to be covered
+ * @param start_up Whether the first column should be covered by movement up or down
+ * @return A sequence of points (longitude, latitude) that need to be visited by drone
+ */
+vpdd sweeping(const Graph &g, bool start_up=false);
 
 
 #endif //MAP_TO_GRAPH_ALGORITHMS_HPP

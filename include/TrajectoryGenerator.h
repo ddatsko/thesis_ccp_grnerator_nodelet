@@ -22,6 +22,7 @@
 #include <mrs_msgs/Path.h>
 #include <std_msgs/String.h>
 #include <vector>
+#include "EnergyCalculator.h"
 
 namespace trajectory_generatiion {
 
@@ -43,6 +44,7 @@ namespace trajectory_generatiion {
         double m_simulation_start_lat;
         double m_simulation_start_long;
         double m_drones_altitude;
+        energy_calculator_config_t m_energy_config;
 
         /* other parameters */
         int sequence_counter = 0;

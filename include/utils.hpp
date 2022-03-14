@@ -6,18 +6,6 @@
 
 using hom_t = std::tuple<double, double, double>;
 
-struct battery_model_t {
-  double cell_capacity;
-  int number_of_cells;
-
-  // Coefficients for the equation https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=9691840&tag=1 (21)
-  // k = C_eff / C = d_0 + d1 * P_cell + d2 * P_cell^2 + d3 * P_cell^3
-  double d0;
-  double d1;
-  double d2;
-  double d3;
-};
-
 
 hom_t cross_product(const hom_t &a, const hom_t &b);
 
@@ -31,5 +19,14 @@ hom_t cross_product(const hom_t &a, const hom_t &b);
 std::pair<double, double> segment_line_intersection(const std::pair<double, double> &p1, 
                                                     const std::pair<double, double> &p2,
                                                     const hom_t &line);
+
+
+/*!
+ * Get the point, obtained by rotating the point p counter clockwise by angle
+ * @param angle Angle of the counter clockwise point rotation
+ * @param p Point to be rotated in the representation {x, y}
+ * @return Points obrained by rotation
+ */
+std::pair<double, double> rotate_point(std::pair<double, double> p, double angle);
 
 #endif

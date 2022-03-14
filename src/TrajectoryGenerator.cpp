@@ -5,6 +5,7 @@
 #include <mrs_msgs/PathSrv.h>
 #include <std_msgs/String.h>
 #include "MapPolygon.hpp"
+#include "EnergyCalculator.h"
 #include "algorithms.hpp"
 #include <boost/shared_ptr.hpp>
 #include <vector>
@@ -38,6 +39,22 @@ namespace trajectory_generatiion {
         pl.loadParam("SIMULATION_START_LAT", m_simulation_start_lat);
         pl.loadParam("SIMULATION_START_LONG", m_simulation_start_long);
         pl.loadParam("ALTITUDE", m_drones_altitude);
+        pl.loadParam("battery_model/cell_capacity", m_energy_config.battery_model.cell_capacity);
+        pl.loadParam("battery_model/number_of_cells", m_energy_config.battery_model.number_of_cells);
+        pl.loadParam("battery_model/d0", m_energy_config.battery_model.d0);
+        pl.loadParam("battery_model/d1", m_energy_config.battery_model.d1);
+        pl.loadParam("battery_model/d2", m_energy_config.battery_model.d2);
+        pl.loadParam("battery_model/d3", m_energy_config.battery_model.d3);
+
+        pl.loadParam("best_speed_model/c0", m_energy_config.best_speed_model.c0);
+        pl.loadParam("best_speed_model/c1", m_energy_config.best_speed_model.c1);
+        pl.loadParam("best_speed_model/c2", m_energy_config.best_speed_model.c2);
+        pl.loadParam("drone_mass", m_energy_config.drone_mass);
+        pl.loadParam("drone_area", m_energy_config.drone_area);
+        pl.loadParam("average_acceleration", m_energy_config.average_acceleration);
+        pl.loadParam("propeller_radius", m_energy_config.propeller_radius);
+        pl.loadParam("number_of_propellers", m_energy_config.number_of_propellers);
+
 
         if (!pl.loadedSuccessfully()) {
             ROS_ERROR("[TrajectoryGenerator]: failed to load non-optional parameters!");
@@ -66,24 +83,32 @@ namespace trajectory_generatiion {
 
         // TODO: make the step parameter be loaded by the param loader, but converted to meters,
         // so it is more convenient to convert it to the drone altitude
-        Graph g = polygon.points_inside_polygon(0.000708);
+        Graph g(polygon, M_PI / 4, 0.00007);
+
+
+
 
         if (m_simulation) {
-          std::vector<std::pair<double, double>> path_points = wavefront(m_simulation_start_lat, m_simulation_start_long, g);
+          auto path_points = sweeping(g);
           if (path_points.empty()) {
               ROS_ERROR("[TrajectoryGenerator]: algorithms was not able to generate the path");
               ros::shutdown();
               return;
           }
           
-          
- //         estimate_path_energy_consumption(path_points, 0.9, 4, 0.119, battery, 0.0215); 
 
-          ROS_INFO_STREAM("[TrajectoryGenerator]: Generated path of length " << path_points.size() << "  sending it to the drone"); 
+ //         estimate_path_energy_consumption(path_points, 0.9, 4, 0.119, battery, 0.0215);
+
+          ROS_INFO_STREAM("[TrajectoryGenerator]: Generated path of length " << path_points.size() << "  sending it to the drone");
           auto path_to_follow = _generate_path_for_simulation_one_drone(path_points);
 
+//          EnergyCalculator energy_calculator(m_energy_config);
+
+//          std::cout << "Calculated path energy consumption: " << energy_calculator.calculate_path_energy_consumption(path_points) << std::endl;
+
+
           mrs_msgs::PathSrv srv;
-          
+
           srv.request.path = path_to_follow;
           if (m_trajectory_generator_service_client.call(srv)) {
             if (not srv.response.success) {

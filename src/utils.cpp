@@ -21,3 +21,6 @@ std::pair<double, double> segment_line_intersection(const std::pair<double, doub
             std::get<1>(p_intersection_h) / std::get<2>(p_intersection_h)};
 }
 
+std::pair<double, double> rotate_point(std::pair<double, double> p, double angle) {
+  return {p.first * std::cos(angle) - p.second * std::sin(angle), p.second * std::cos(angle) + p.first * std::sin(angle)};
+}
