@@ -57,8 +57,8 @@
 			<styleUrl>#__managed_style_2A9CF01BF81FA2F30243</styleUrl>
 		</Pair>
 	</StyleMap>
-	<Placemark id="06CC83A5511FA2F2D835">
-		<name>Pond</name>
+	<Placemark id="fly-zone">
+		<name>fly-zone</name>
 		<description><![CDATA[<div>Pond<br></div>]]></description>
 		<LookAt>
 			<longitude>15.34813707717104</longitude>

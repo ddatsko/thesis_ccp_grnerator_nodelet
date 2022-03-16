@@ -3,9 +3,13 @@
 
 #include <vector>
 #include "Graph.hpp"
+#include "MapPolygon.hpp"
 
 using vpdd = std::vector<std::pair<double, double>>;
 
+struct polygon_decomposition_error: public std::runtime_error {
+    using runtime_error::runtime_error;
+};
 
 /*!
  * Calculate the sweeping path to cover the graph g
@@ -15,6 +19,15 @@ using vpdd = std::vector<std::pair<double, double>>;
  * @return A sequence of points (longitude, latitude) that need to be visited by drone
  */
 vpdd sweeping(const Graph &g, bool start_up=false);
+
+/*!
+ * Decompose the MapPolygon into smaller MapPolygons using trapezoidal decomposition algorithm
+ * @param polygon MapPolygon to be decomposed
+ * @return Vector of convex polygons with no no-fly-zones and such that
+ * union(result) = original_polygon
+ * intersection(result) = {}
+ */
+std::vector<MapPolygon> trapezoidal_decomposition(const MapPolygon &polygon);
 
 
 #endif //MAP_TO_GRAPH_ALGORITHMS_HPP

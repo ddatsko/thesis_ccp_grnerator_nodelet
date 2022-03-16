@@ -79,6 +79,26 @@ namespace trajectory_generatiion {
             return;
         }
 
+        auto polygons_decomposed = trapezoidal_decomposition(polygon);
+        {
+            std::ofstream of{"/home/mrs/polygons/main.csv"};
+            for (auto &p: polygon.fly_zone_polygon_points) {
+                of << std::setprecision(10) << p.first << ", " << std::setprecision(10) << p.second << std::endl;
+            }
+            of.close();
+        }
+        int counter = 0;
+        for (auto &pol: polygons_decomposed) {
+            std::stringstream filename;
+            filename << "/home/mrs/polygons/" << counter++ << ".csv";
+            std::ofstream of{filename.str()};
+            for (auto &p: pol.fly_zone_polygon_points) {
+                of << std::setprecision(10) << p.first << ", " << std::setprecision(10) << p.second << std::endl;
+            }
+            of.close();
+        }
+
+
         ROS_INFO("[TrajectoryGenerator]: successfully loaded polygon from KML file");
 
         // TODO: make the step parameter be loaded by the param loader, but converted to meters,
@@ -95,7 +115,7 @@ namespace trajectory_generatiion {
               ros::shutdown();
               return;
           }
-          
+
 
  //         estimate_path_energy_consumption(path_points, 0.9, 4, 0.119, battery, 0.0215);
 

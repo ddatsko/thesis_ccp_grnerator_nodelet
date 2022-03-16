@@ -7,11 +7,10 @@
 #include <ros/ros.h>
 
 
-
 namespace {
-    std::pair<double, double> string_to_point(const std::string &point_string) {
+    point_t string_to_point(const std::string &point_string) {
         size_t coma_pos;
-        std::pair<double, double> point;
+        point_t point;
         try {
             point.first = std::stod(point_string, &coma_pos);
             point.second = std::stod(point_string.substr(coma_pos + 1));
@@ -60,7 +59,8 @@ void MapPolygon::load_polygon_from_file(const std::string &filename) {
 
     for (const auto &placemark: document.children("Placemark")) {
         auto placemark_polygon_points = get_points_from_string(
-                placemark.child("Polygon").child("outerBoundaryIs").child("LinearRing").child("coordinates").text().as_string());
+                placemark.child("Polygon").child("outerBoundaryIs").child("LinearRing").child(
+                        "coordinates").text().as_string());
 
         if (placemark.child("name").text().as_string() == FLY_ZONE_PLACEMARK_NAME) {
             fly_zone_found = true;
@@ -97,15 +97,63 @@ MapPolygon MapPolygon::rotated(double angle) const {
 
     // Rotate each point in each of the polygons describing non-fly zone
     std::transform(no_fly_zone_polygons.begin(),
-                  no_fly_zone_polygons.end(),
-                  std::inserter(new_polygon.no_fly_zone_polygons, new_polygon.no_fly_zone_polygons.begin()),
-                  [angle](const auto &polygon){
-        polygon_t no_fly_new_polygon;
-        std::transform(polygon.begin(),
-                      polygon.end(),
-                      std::inserter(no_fly_new_polygon, no_fly_new_polygon.begin()),
-                      [angle](const auto &p){return rotate_point(p, angle);});
-        return no_fly_new_polygon;
-    });
+                   no_fly_zone_polygons.end(),
+                   std::inserter(new_polygon.no_fly_zone_polygons, new_polygon.no_fly_zone_polygons.begin()),
+                   [angle](const auto &polygon) {
+                       polygon_t no_fly_new_polygon;
+                       std::transform(polygon.begin(),
+                                      polygon.end(),
+                                      std::inserter(no_fly_new_polygon, no_fly_new_polygon.begin()),
+                                      [angle](const auto &p) { return rotate_point(p, angle); });
+                       return no_fly_new_polygon;
+                   });
     return new_polygon;
+}
+
+
+std::set<point_t> MapPolygon::get_all_points() const {
+    std::set<point_t> points;
+    std::copy(fly_zone_polygon_points.begin(), fly_zone_polygon_points.end(),
+              std::inserter(points, points.begin()));
+    std::for_each(no_fly_zone_polygons.begin(), no_fly_zone_polygons.end(),
+                  [&](const auto &p) {
+                      std::copy(p.begin(), p.end(), std::inserter(points, points.begin()));
+                  });
+    return points;
+}
+
+namespace {
+    template<class T>
+    bool find_point_neighbours(point_t point, std::pair<point_t, point_t> &res, const T &container) {
+        if (container.size() < 3) {
+            throw wrong_polygon_format_error("Polygon has less than 3 points");
+        }
+        if (container[0] == point) {
+            res = {container[container.size() - 2], container[1]};
+            return true;
+        }
+
+        // First and last points are always the same, so skip the last one for simplicity
+        for (size_t i = 1; i < container.size() - 1; i++) {
+            if (container[i] == point) {
+                res = {container[i - 1], container[i + 1]};
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
+
+std::pair<point_t, point_t> MapPolygon::point_neighbors(point_t point) const {
+    std::pair<point_t, point_t> res;
+    if (find_point_neighbours(point, res, fly_zone_polygon_points)) {
+        return res;
+    }
+    for (auto &p: no_fly_zone_polygons) {
+        if (find_point_neighbours(point, res, p)) {
+            return res;
+        }
+    }
+    throw non_existing_point_error("Point is not in the polygon");
 }
