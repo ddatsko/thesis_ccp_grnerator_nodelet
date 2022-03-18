@@ -44,21 +44,27 @@ public:
      * Get the list of all the polygons point (both fly-zone and non-fly zone)
      * @return Set of all the points
      */
-    std::set<point_t> get_all_points() const;
+    [[nodiscard]] std::set<point_t> get_all_points() const;
 
     /*!
      * Get two neighbouring points in some polygon for the specified point
      * @param point point that belongs to one of polygons
      * @return pair of two points - neighbors of the points
      */
-    std::pair<point_t, point_t> point_neighbors(point_t point) const;
+    [[nodiscard]] std::pair<point_t, point_t> point_neighbors(point_t point) const;
 
     /*!
      * Get the map polygon, rotated by angle radians counter clockwise around the coordinates origin
      * @param angle Angle of the rotation [rad]
      * @return New MapPolygon with all the points rotated by the angle
      */
-    MapPolygon rotated(double angle) const;
+    [[nodiscard]] MapPolygon rotated(double angle) const;
+
+    /*!
+     * Find the edge starting from the first rightmost point
+     * @return Edge starting from the first rightmost point
+     */
+    [[nodiscard]] std::pair<point_t, point_t> rightmost_edge();
 
 
     //TODO: implement reducing all the points and not only ones of the outer perimeter

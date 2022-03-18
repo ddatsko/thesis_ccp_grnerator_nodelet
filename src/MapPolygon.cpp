@@ -157,3 +157,16 @@ std::pair<point_t, point_t> MapPolygon::point_neighbors(point_t point) const {
     }
     throw non_existing_point_error("Point is not in the polygon");
 }
+
+[[nodiscard]] std::pair<point_t, point_t> MapPolygon::rightmost_edge() {
+    double rightmost_x = fly_zone_polygon_points[0].first;
+    for (const auto &point: fly_zone_polygon_points) {
+        rightmost_x = std::max(rightmost_x, point.first);
+    }
+    for (size_t i = 0; i < fly_zone_polygon_points.size() - 1; i++) {
+        if (fly_zone_polygon_points[i].first == rightmost_x) {
+            return {fly_zone_polygon_points[i], fly_zone_polygon_points[i + 1]};
+        }
+    }
+    throw wrong_polygon_format_error("Cannot find a rightmost point in polygon. Probably it is empty");
+}

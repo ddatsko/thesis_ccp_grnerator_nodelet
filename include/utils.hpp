@@ -29,4 +29,17 @@ std::pair<double, double> segment_line_intersection(const std::pair<double, doub
  */
 std::pair<double, double> rotate_point(std::pair<double, double> p, double angle);
 
+/*!
+ * Check if two numbers are close enough
+ * @param n1 Number 1
+ * @param n2 Number 2
+ * @param eps Possible error
+ * @return true if the distance between n1 and n2 is less than eps
+ */
+template<typename T>
+bool isclose(T n1, T n2, T eps=1e-10) {
+    return std::abs(n1 - n2) < eps;
+}
+
 #endif
+
