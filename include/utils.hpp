@@ -3,9 +3,9 @@
 
 #include <tuple>
 #include <vector>
+#include "custom_types.hpp"
 
 using hom_t = std::tuple<double, double, double>;
-
 
 hom_t cross_product(const hom_t &a, const hom_t &b);
 
@@ -28,6 +28,8 @@ std::pair<double, double> segment_line_intersection(const std::pair<double, doub
  * @return Points obrained by rotation
  */
 std::pair<double, double> rotate_point(std::pair<double, double> p, double angle);
+
+std::pair<double, double> segment_segment_intersection(const segment_t &s1, const segment_t &s2);
 
 /*!
  * Check if two numbers are close enough

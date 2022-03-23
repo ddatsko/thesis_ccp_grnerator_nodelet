@@ -7,9 +7,9 @@
 #include <stdexcept>
 #include <numeric>
 #include <set>
+#include <map>
+#include "custom_types.hpp"
 
-using polygon_t = std::vector<std::pair<double, double>>;
-using point_t = std::pair<double, double>;
 
 struct kml_file_parse_error: public std::runtime_error {
   using runtime_error::runtime_error;
@@ -24,8 +24,7 @@ struct wrong_polygon_format_error: public std::runtime_error {
 };
 
 
-class MapPolygon {
-public:
+struct MapPolygon {
     using polygon_t = std::vector<point_t>;
 
     const std::string FLY_ZONE_PLACEMARK_NAME = "fly-zone";
@@ -44,7 +43,13 @@ public:
      * Get the list of all the polygons point (both fly-zone and non-fly zone)
      * @return Set of all the points
      */
-    [[nodiscard]] std::set<point_t> get_all_points() const;
+    [[nodiscard]] std::vector<point_t> get_all_points() const;
+
+    /*!
+     * Get the vector of all segments (of both fly and no-fly zones of the map polygon)
+     * @return Vector of all the present segments
+     */
+    [[nodiscart]] std::vector<segment_t> get_all_segments() const;
 
     /*!
      * Get two neighbouring points in some polygon for the specified point

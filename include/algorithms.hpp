@@ -23,11 +23,12 @@ vpdd sweeping(const Graph &g, bool start_up=false);
 /*!
  * Decompose the MapPolygon into smaller MapPolygons using trapezoidal decomposition algorithm
  * @param polygon MapPolygon to be decomposed
+ * @param merge_to_boustrophedon If true, trapezoids will be merged if they have a common edge (boustrophedon decomposition)
  * @return Vector of convex polygons with no no-fly-zones and such that
  * union(result) = original_polygon
  * intersection(result) = {}
  */
-std::vector<MapPolygon> trapezoidal_decomposition(const MapPolygon &polygon);
+std::vector<MapPolygon> trapezoidal_decomposition(const MapPolygon &polygon, bool merge_to_boustrophedon=true);
 
 
 #endif //MAP_TO_GRAPH_ALGORITHMS_HPP

@@ -24,3 +24,11 @@ std::pair<double, double> segment_line_intersection(const std::pair<double, doub
 std::pair<double, double> rotate_point(std::pair<double, double> p, double angle) {
   return {p.first * std::cos(angle) - p.second * std::sin(angle), p.second * std::cos(angle) + p.first * std::sin(angle)};
 }
+
+
+std::pair<double, double> segment_segment_intersection(const segment_t &s1, const segment_t &s2) {
+    hom_t p1 = {s2.first.first, s2.first.second, 1};
+    hom_t p2 = {s2.second.first, s2.second.second, 1};
+    hom_t line = cross_product(p1, p2);
+    return segment_line_intersection(s1.first, s1.second, line);
+}

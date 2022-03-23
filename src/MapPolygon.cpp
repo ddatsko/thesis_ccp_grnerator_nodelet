@@ -111,8 +111,8 @@ MapPolygon MapPolygon::rotated(double angle) const {
 }
 
 
-std::set<point_t> MapPolygon::get_all_points() const {
-    std::set<point_t> points;
+std::vector<point_t> MapPolygon::get_all_points() const {
+    std::vector<point_t> points;
     std::copy(fly_zone_polygon_points.begin(), fly_zone_polygon_points.end(),
               std::inserter(points, points.begin()));
     std::for_each(no_fly_zone_polygons.begin(), no_fly_zone_polygons.end(),
@@ -134,7 +134,7 @@ namespace {
         }
 
         // First and last points are always the same, so skip the last one for simplicity
-        for (size_t i = 1; i < container.size() - 1; i++) {
+        for (size_t i = 1; i < container.size() - 1; ++i) {
             if (container[i] == point) {
                 res = {container[i - 1], container[i + 1]};
                 return true;
@@ -163,10 +163,23 @@ std::pair<point_t, point_t> MapPolygon::point_neighbors(point_t point) const {
     for (const auto &point: fly_zone_polygon_points) {
         rightmost_x = std::max(rightmost_x, point.first);
     }
-    for (size_t i = 0; i < fly_zone_polygon_points.size() - 1; i++) {
+    for (size_t i = 0; i < fly_zone_polygon_points.size() - 1; ++i) {
         if (fly_zone_polygon_points[i].first == rightmost_x) {
             return {fly_zone_polygon_points[i], fly_zone_polygon_points[i + 1]};
         }
     }
     throw wrong_polygon_format_error("Cannot find a rightmost point in polygon. Probably it is empty");
+}
+
+std::vector<segment_t> MapPolygon::get_all_segments() const {
+    std::vector<segment_t> segments;
+    for (size_t i = 0; i + 1 < fly_zone_polygon_points.size(); ++i) {
+        segments.emplace_back(fly_zone_polygon_points[i], fly_zone_polygon_points[i + 1]);
+    }
+    for (const auto& pol: no_fly_zone_polygons) {
+        for (size_t i = 0; i + 1 < pol.size(); ++i) {
+            segments.emplace_back(pol[i], pol[i + 1]);
+        }
+    }
+    return segments;
 }

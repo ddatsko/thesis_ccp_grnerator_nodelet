@@ -6,9 +6,6 @@
 #include <algorithm>
 #include "utils.hpp"
 
-
-using pdd = std::pair<double, double>;
-
 Graph::Graph(const MapPolygon &map_polygon, double rotation_angle, double step): m_rotation_angle(rotation_angle), m_step(step) {
 
     // Make the rotated map
