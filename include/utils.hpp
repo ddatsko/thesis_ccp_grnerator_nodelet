@@ -27,9 +27,15 @@ std::pair<double, double> segment_line_intersection(const std::pair<double, doub
  * @param p Point to be rotated in the representation {x, y}
  * @return Points obrained by rotation
  */
-std::pair<double, double> rotate_point(std::pair<double, double> p, double angle);
+point_t rotate_point(point_t p, double angle);
 
-std::pair<double, double> segment_segment_intersection(const segment_t &s1, const segment_t &s2);
+point_t segment_segment_intersection(const segment_t &s1, const segment_t &s2);
+
+double segment_length(const segment_t &segment);
+
+bool segments_intersect(const segment_t &s1, const segment_t &s2);
+
+double angle_between_vectors(point_t p1, point_t p2, point_t p3);
 
 /*!
  * Check if two numbers are close enough

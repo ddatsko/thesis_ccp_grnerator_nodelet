@@ -14,8 +14,14 @@
  */
 class ShortestPathCalculator {
 private:
+    std::vector<segment_t> m_polygon_segments;
     std::map<std::pair<double, double>, int> m_point_index;
-    std::vector<std::vector<int>> m_distances;
+    std::vector<std::vector<double>> m_floyd_warshall_d;
+    std::vector<std::vector<int>> m_next_vertex_in_path;
+
+    void run_floyd_warshall();
+
+    std::vector<int> polygon_nodes_seen_from_point(point_t point);
 
 public:
     /*!

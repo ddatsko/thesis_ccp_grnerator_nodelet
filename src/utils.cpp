@@ -32,3 +32,40 @@ std::pair<double, double> segment_segment_intersection(const segment_t &s1, cons
     hom_t line = cross_product(p1, p2);
     return segment_line_intersection(s1.first, s1.second, line);
 }
+
+double segment_length(const segment_t &segment) {
+    return std::sqrt(std::pow(segment.second.first - segment.first.first, 2) +
+                     std::pow(segment.second.second - segment.first.second, 2));
+}
+
+bool segments_intersect(const segment_t &s1, const segment_t &s2) {
+    auto intersection = segment_segment_intersection(s1, s2);
+    // Return true only of the intersection of lines is between the constraints of the first and the second segments
+    return intersection.first >= std::min(s1.first.first, s1.second.first) &&
+           intersection.first <= std::max(s1.first.first, s1.second.first) &&
+           intersection.first >= std::min(s2.first.first, s2.second.first) &&
+           intersection.first <= std::max(s2.first.first, s2.second.first) &&
+            intersection.second >= std::min(s1.first.second, s1.second.second) &&
+            intersection.second <= std::max(s1.first.second, s1.second.second) &&
+            intersection.second >= std::min(s2.first.second, s2.second.second) &&
+            intersection.second <= std::max(s2.first.second, s2.second.second);
+}
+
+
+/*!
+ * Angle between vectors (p1, p2) and (p2, p3)
+ * @param p1 First point of first vector
+ * @param p2 Second point of first vector, first point of third vector
+ * @param p3 Second point of the second vector
+ * @return  Clockwise angle between two vectors in range (0, 2 * pi)
+ */
+double angle_between_vectors(point_t p1, point_t p2, point_t p3) {
+    double x1 = p1.first - p2.first, y1 = p1.second - p2.second;
+    double x2 = p3.first - p2.first, y2 = p3.second - p2.second;
+    double dot = x1 * x2 + y1 * y2, det = x1 * y2 - y1 * x2;
+    double angle = atan2(det, dot);
+    if (angle < 0) {
+        angle += 2 * M_PI;
+    }
+    return angle;
+}

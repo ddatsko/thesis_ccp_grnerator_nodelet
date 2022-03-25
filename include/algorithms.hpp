@@ -28,7 +28,7 @@ vpdd sweeping(const Graph &g, bool start_up=false);
  * union(result) = original_polygon
  * intersection(result) = {}
  */
-std::vector<MapPolygon> trapezoidal_decomposition(const MapPolygon &polygon, bool merge_to_boustrophedon=true);
+std::vector<MapPolygon> trapezoidal_decomposition(const MapPolygon &polygon,  bool merge_to_boustrophedon=false);
 
 
 #endif //MAP_TO_GRAPH_ALGORITHMS_HPP

@@ -31,7 +31,7 @@ public:
     Graph(const MapPolygon &map_polygon, double rotation_angle, double step);
     bool operator()(size_t row, size_t col) const;
     void add_vertex(int row, int col);
-    std::pair<double, double> get_point_coords(size_t row, size_t col) const;
+    point_t get_point_coords(size_t row, size_t col) const;
 
     [[nodiscard]] size_t get_width() const;
     [[nodiscard]] size_t get_height() const;

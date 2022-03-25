@@ -10,6 +10,7 @@
 #include <boost/shared_ptr.hpp>
 #include <vector>
 #include "utils.hpp"
+#include "ShortestPathCalculator.hpp"
 
 long long METERS_IN_LON_DEGREE = 111000;
 long long METERS_IN_LAT_DEGREE = 111000;
@@ -55,7 +56,6 @@ namespace trajectory_generatiion {
         pl.loadParam("propeller_radius", m_energy_config.propeller_radius);
         pl.loadParam("number_of_propellers", m_energy_config.number_of_propellers);
 
-
         if (!pl.loadedSuccessfully()) {
             ROS_ERROR("[TrajectoryGenerator]: failed to load non-optional parameters!");
             ros::shutdown();
@@ -78,8 +78,22 @@ namespace trajectory_generatiion {
             ros::shutdown();
             return;
         }
+//        std::cout << "Points: " << std::endl;
+//        for (auto &p: polygon.fly_zone_polygon_points) {
+//            std::cout << p.first << " " << p.second << std::endl;
+//        }
 
-        auto polygons_decomposed = trapezoidal_decomposition(polygon);
+        ShortestPathCalculator shortest_path_calculator{polygon};
+
+//        std::cout << "Intersect: " <<  segments_intersect({{0, 0}, {5.16, 3.17}}, {{1, 3.5}, {1, 5}}) << std::endl;
+
+        std::vector<MapPolygon> polygons_decomposed;
+        try {
+            polygons_decomposed = trapezoidal_decomposition(polygon, true);
+        } catch (const polygon_decomposition_error &e) {
+            std::cout << e.what() << std::endl;
+        }
+
         {
             std::ofstream of{"/home/mrs/polygons/main.csv"};
             for (auto &p: polygon.fly_zone_polygon_points) {
@@ -103,7 +117,7 @@ namespace trajectory_generatiion {
 
         // TODO: make the step parameter be loaded by the param loader, but converted to meters,
         // so it is more convenient to convert it to the drone altitude
-        Graph g(polygon, M_PI / 4, 0.00007);
+        /* Graph g(polygon, M_PI / 4, 0.00007);
 
 
 
@@ -146,6 +160,7 @@ namespace trajectory_generatiion {
           ros::shutdown();
           return;
         }
+         */
         ROS_INFO_ONCE("[TrajectoryGenerator]: initialized");
 
         m_is_initialized = true;
@@ -158,7 +173,7 @@ mrs_msgs::Path TrajectoryGenerator::_generate_path_for_simulation_one_drone(std:
     // Return an empty message if the algorithm is running not for a simulation
     return path;
   }
-  
+
   // Set the parameters for trajectory generation
   path.header.stamp = ros::Time::now();
   path.header.seq = sequence_counter++;
@@ -187,7 +202,7 @@ mrs_msgs::Path TrajectoryGenerator::_generate_path_for_simulation_one_drone(std:
   return path;
 
 }
-  
+
 
 
 }  // namespace trajectory_generatiion

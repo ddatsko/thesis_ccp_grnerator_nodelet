@@ -156,7 +156,6 @@ std::vector<MapPolygon> trapezoidal_decomposition(const MapPolygon &polygon, boo
 
     // Iterate through all the "interesting" points
     for (const auto &p: points) {
-
         const double x = p.first, y = p.second;
         auto neighbors = polygon.point_neighbors(p);
 
@@ -257,6 +256,9 @@ std::vector<MapPolygon> trapezoidal_decomposition(const MapPolygon &polygon, boo
         if (!segment_found) {
             throw polygon_decomposition_error("Checkpoint does not belong to any polygon..");
         }
+
+
+
     }
 
     return res;

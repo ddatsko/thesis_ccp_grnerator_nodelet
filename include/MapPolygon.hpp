@@ -43,13 +43,13 @@ struct MapPolygon {
      * Get the list of all the polygons point (both fly-zone and non-fly zone)
      * @return Set of all the points
      */
-    [[nodiscard]] std::vector<point_t> get_all_points() const;
+    [[nodiscard]] std::set<point_t> get_all_points() const;
 
     /*!
      * Get the vector of all segments (of both fly and no-fly zones of the map polygon)
      * @return Vector of all the present segments
      */
-    [[nodiscart]] std::vector<segment_t> get_all_segments() const;
+    [[nodiscard]] std::vector<segment_t> get_all_segments() const;
 
     /*!
      * Get two neighbouring points in some polygon for the specified point

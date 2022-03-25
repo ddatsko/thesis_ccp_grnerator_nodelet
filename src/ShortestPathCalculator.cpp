@@ -6,35 +6,32 @@
 #include <algorithm>
 #include "utils.hpp"
 #include <cmath>
+#include <iostream>
+#include <iomanip>
 
 namespace {
     const double eps = 1e-7;
 
-    /*!
-     * Angle between vectors (p1, p2) and (p2, p3)
-     * @param p1 First point of first vector
-     * @param p2 Second point of first vector, first point of third vector
-     * @param p3 Second point of the second vector
-     * @return  Clockwise angle between two vectors in range (0, 2 * pi)
-     */
-    double angle_between_vectors(point_t p1, point_t p2, point_t p3) {
-        double x1 = p2.first - p1.first, y1 = p2.second - p1.second;
-        double x2 = p3.first - p2.first, y2 = p3.second - p2.second;
-        double dot = x1 * x2 + y1 * y2, det = x1 * y2 - y1 * x2;
-        double angle = atan2(det, dot);
-        if (angle < 0) {
-            angle += 2 * M_PI;
-        }
-        return angle;
+    point_t pm(point_t point) {
+        return {point.first * 1000, point.second * 1000};
     }
 
     std::set<segment_t> no_direct_path(const std::vector<point_t> &polygon, bool fly_zone = true) {
         // Vector of turning angles around each polygon node
         std::vector<double> angles;
-        angles.push_back(angle_between_vectors(polygon[polygon.size() - 2], polygon[0], polygon[1]));
+//        std::cout << "Size: " << polygon.size() << std::endl;
+        angles.push_back(angle_between_vectors(pm(polygon[polygon.size() - 2]), pm(polygon[0]), pm(polygon[1])));
         for (size_t i = 1; i + 1 < polygon.size(); ++i) {
-            angles.push_back(angle_between_vectors(polygon[i - 1], polygon[i], polygon[i + 1]));
+//            std::cout << i << std::endl;
+            angles.push_back(angle_between_vectors(pm(polygon[i - 1]), pm(polygon[i]), pm(polygon[i + 1])));
         }
+
+//        std::cout << "Angles: " << std::endl;
+//        for (auto &a: angles) {
+//            std::cout << a / M_PI * 180 << std::endl;
+//        }
+//        std::cout << "---------------------------------" << std::endl;
+
         std::set<segment_t> no_direct_view;
         // Iterate through each pair of points in the polygon and if the sum of angles between them is not suitable -
         // add them to the list of not possible ones
@@ -47,6 +44,11 @@ namespace {
                     no_direct_view.insert({polygon[i], polygon[j]});
                 }
             }
+        }
+        // If first and last points were added accidentally, remove them
+        auto pos = no_direct_view.find({polygon.front(), polygon[polygon.size() - 2]});
+        if (pos != no_direct_view.end()) {
+            no_direct_view.erase(pos);
         }
         return no_direct_view;
     }
@@ -70,10 +72,10 @@ namespace {
     }
 }
 
-
 ShortestPathCalculator::ShortestPathCalculator(const MapPolygon &polygon) {
-    auto polygon_points = polygon.get_all_points();
-    auto polygon_segments = polygon.get_all_segments();
+    auto points_tmp = polygon.get_all_points();
+    std::vector<point_t> polygon_points{points_tmp.begin(), points_tmp.end()};
+    m_polygon_segments = polygon.get_all_segments();
 
     // Assign each point a unique identifier to be able to quickly traverse through it
     int index = 0;
@@ -83,33 +85,117 @@ ShortestPathCalculator::ShortestPathCalculator(const MapPolygon &polygon) {
 
     // Create a 2-d matrix that will contain paths for the shortest path between each of perimeter point
     // And 2-d matrix for the Floyd-Warshall algorithm
-    m_distances = std::vector<std::vector<int>>(polygon_points.size());
-    std::for_each(m_distances.begin(), m_distances.end(),
-                  [&](auto &row) { row = std::vector<int>(polygon_points.size()); });
-    auto fw_d = m_distances;
+    m_next_vertex_in_path = std::vector<std::vector<int>>(polygon_points.size());
+    std::for_each(m_next_vertex_in_path.begin(), m_next_vertex_in_path.end(),
+                  [&](auto &row) { row = std::vector<int>(polygon_points.size(), -1); });
+    m_floyd_warshall_d = std::vector<std::vector<double>>(polygon_points.size());
+    std::for_each(m_floyd_warshall_d.begin(), m_floyd_warshall_d.end(),
+                  [&](auto &row){row = std::vector<double>(polygon_points.size(), HUGE_VAL);});
+
+    // Get the list of pairs of points, for which there is no direct path even if they can "see" each other
+    auto no_direct_path_pairs = no_direct_path(polygon);
+
+//    std::cout << "No pairs: " << std::endl;
+//    for (auto &p: no_direct_path_pairs) {
+//        std::cout << p.first.first << "," << p.first.second << "   " << p.second.first << "," << p.second.second << std::endl;
+//    }
+//    std::cout << "------------------------" << std::endl;
 
     // O(N^3) building of the matrix. Ok as the algorithm itself runs on O(N^3)
     for (size_t i = 0; i < polygon_points.size(); i++) {
+        m_floyd_warshall_d[i][i] = 0;
         for (size_t j = i + 1; j < polygon_points.size(); j++) {
             segment_t segment_between_point = {polygon_points[i], polygon_points[j]};
+            if (polygon_points[i] == polygon_points[j]) {
+                continue;
+            }
+//            std::cout << "Checking points: " << segment_between_point.first.first << "," << segment_between_point.first.second << "   " <<
+//            segment_between_point.second.first << "," << segment_between_point.second.second << std::endl;
+
+            // If there is no direct path by previously calculated algorithm, omit this pair
+            if (no_direct_path_pairs.find(segment_between_point) != no_direct_path_pairs.end() ||
+                no_direct_path_pairs.find({segment_between_point.second, segment_between_point.first}) != no_direct_path_pairs.end()) {
+//                std::cout << "No direct path" << std::endl;
+                continue;
+            }
+
             bool segment_intersects = false;
-            for (const auto &segment: polygon_segments) {
+            for (const auto &segment: m_polygon_segments) {
+//                std::cout << "Segment: " << segment.first.first << "," << segment.first.second << "   " <<
+//                segment.second.first << "," << segment.second.second << std::endl;
+
                 // If there is an exact edge between these two points -- break as there won't be any intersections anymore
                 if ((segment.first == segment_between_point.first && segment.second == segment_between_point.second) ||
                     (segment.second == segment_between_point.first && segment.first == segment_between_point.second)) {
+                    segment_intersects = false;
+//                    std::cout << "Exact edge between point " << std::endl;
                     break;
                 }
-                // If the segment starts in any of
 
-                // TODO: check if this works properly for vertical and horizontal lines intersection
-                // If there is a segment between two point -- they are not visible for each other
-                auto intersection = segment_segment_intersection(segment_between_point, segment);
-                if (intersection.first >= std::min(segment.first.first, segment.second.first) &&
-                    intersection.first <= std::max(segment.first.first, segment.second.first)) {
+                // If the segment starts in point - don't check it for intersection as it will intersect in that point
+                if (segment.first == segment_between_point.first || segment.second == segment_between_point.first ||
+                    segment.first == segment_between_point.second || segment.second == segment_between_point.second) {
+                    continue;
+                }
 
+                if (segments_intersect(segment, segment_between_point)) {
+                    segment_intersects = true;
+                    break;
+                }
+            }
+            if (!segment_intersects) {
+                // Update Floyd Warshall algorithm matrix
+                m_floyd_warshall_d[i][j] = m_floyd_warshall_d[j][i] = segment_length(segment_between_point);
+                m_next_vertex_in_path[i][j] = static_cast<int>(j);
+                m_next_vertex_in_path[j][i] = static_cast<int>(i);
+            }
+        }
+    }
+    /*
+    for (size_t i = 0; i < polygon_points.size(); ++i) {
+        std::cout << i << ": " << polygon_points[i].first << ", " << polygon_points[i].second << std::endl;
+    }
+
+    for (size_t i = 0; i < polygon_points.size(); ++i) {
+        for (size_t j = 0; j < polygon_points.size(); j++) {
+            std::cout << (m_floyd_warshall_d[i][j] == HUGE_VAL ? 0 : 1) << " ";
+        }
+        std::cout << std::endl;
+    }
+     */
+    run_floyd_warshall();
+    for (auto & i : m_next_vertex_in_path) {
+        for (int j : i) {
+            std::cout << j << " ";
+        }
+        std::cout << std::endl;
+    }
+}
+
+
+void ShortestPathCalculator::run_floyd_warshall() {
+    const size_t N = m_floyd_warshall_d.size();
+    for (size_t k = 0; k < N; ++k) {
+        for (size_t j = 0; j < N; ++j) {
+            for (size_t i = 0; i < N; ++i) {
+                if (m_floyd_warshall_d[i][j] > m_floyd_warshall_d[i][k] + m_floyd_warshall_d[k][j]) {
+                    m_floyd_warshall_d[i][j] = m_floyd_warshall_d[i][k] + m_floyd_warshall_d[k][j];
+                    m_floyd_warshall_d[j][i] = m_floyd_warshall_d[i][j];
+                    // Now, to get to j from i, we should in direction to k (to next vertex in path to k)
+                    m_next_vertex_in_path[i][j] = m_next_vertex_in_path[i][k];
+                    m_next_vertex_in_path[j][i] = m_next_vertex_in_path[j][k];
                 }
             }
         }
     }
-
 }
+
+
+
+
+
+
+
+
+
+

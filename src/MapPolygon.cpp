@@ -15,26 +15,54 @@ namespace {
             point.first = std::stod(point_string, &coma_pos);
             point.second = std::stod(point_string.substr(coma_pos + 1));
         } catch (std::invalid_argument &e) {
-            throw kml_file_parse_error{"Could not convert string too coordinates..."};
+            throw kml_file_parse_error{"Could not convert string '" + point_string + "' too coordinates..."};
         }
         return point;
     }
 
-    MapPolygon::polygon_t get_points_from_string(std::string kml_file_string) {
-        polygon_t points;
-
-        // Split the string by spaces and add each point to the vector of internal points
-        size_t pos;
-        while ((pos = kml_file_string.find(' ')) != std::string::npos) {
-            std::string point_string = kml_file_string.substr(0, pos);
-            kml_file_string.erase(0, pos + 1);
-            if (point_string.empty()) {
-                continue;
-            }
-            points.push_back(string_to_point(point_string));
+    /*!
+     * Make the polygon be directed clockwise (when travelling from the first to last point,
+     * the area inside of polygon is always on the right) for the convenience of working with it
+     */
+    void make_polygon_clockwise(polygon_t &polygon) {
+        if (polygon.size() <= 2) {
+            return;
         }
-        return points;
+        double angle = M_PI - angle_between_vectors(polygon[polygon.size() - 2], polygon[0], polygon[1]);
+        for (size_t i = 0; i + 2 < polygon.size(); ++i) {
+            angle += M_PI - angle_between_vectors(polygon[i], polygon[i + 1], polygon[i + 2]);
+        }
+        // If the outer angle of the whole polygon is -2 * pi -- we need to reverse it
+        if (std::abs(-2 * M_PI - angle) < std::abs(2 * M_PI - angle)) {
+            std::reverse(polygon.begin(), polygon.end());
+        }
     }
+}
+
+MapPolygon::polygon_t get_points_from_string(std::string kml_file_string) {
+    // Strip the string
+    kml_file_string.erase(kml_file_string.find_last_not_of(" \t\n\r\f\v") + 1);
+    kml_file_string.erase(0, kml_file_string.find_first_not_of(" \t\n\r\f\v"));
+
+    polygon_t points;
+
+    // Split the string by spaces and add each point to the vector of internal points
+    size_t pos;
+    while (!kml_file_string.empty()) {
+        pos = kml_file_string.find(' ');
+        std::string point_string = kml_file_string.substr(0, pos);
+        if (pos == std::string::npos) {
+            kml_file_string = std::string();
+        } else {
+            kml_file_string.erase(0, pos + 1);
+        }
+        if (point_string.empty()) {
+            continue;
+        }
+        points.push_back(string_to_point(point_string));
+    }
+    make_polygon_clockwise(points);
+    return points;
 }
 
 MapPolygon::MapPolygon(const MapPolygon &p) {
@@ -111,8 +139,8 @@ MapPolygon MapPolygon::rotated(double angle) const {
 }
 
 
-std::vector<point_t> MapPolygon::get_all_points() const {
-    std::vector<point_t> points;
+std::set<point_t> MapPolygon::get_all_points() const {
+    std::set<point_t> points;
     std::copy(fly_zone_polygon_points.begin(), fly_zone_polygon_points.end(),
               std::inserter(points, points.begin()));
     std::for_each(no_fly_zone_polygons.begin(), no_fly_zone_polygons.end(),
