@@ -62,7 +62,7 @@ private:
    * @param p3: coordinates of the third point
    * @return The angle in radians in range (0..PI)
    */
-  double angle_between_points(std::pair<double, double> p0, std::pair<double, double> p1, std::pair<double, double> p2);
+  double angle_between_points(std::pair<double, double> p0, std::pair<double, double> p1, std::pair<double, double> p2) const;
   
   /*!
    * Calculate the energy spent on turning manuver including the deceleration and acceleration
@@ -70,8 +70,9 @@ private:
    * @param angle Turning angle [rad]
    * @return Consumped energy in Joules
    */
-  double calculate_turning_energy(double angle);
-  
+  double calculate_turning_energy(double angle) const;
+
+public:
   /*! 
    * Calculate the energy for moving on the straight line. The acceleration and deceleration times are encountered, but the 
    * energy needed to perform the acceleration of deceleration is not encountered (as it should be 
@@ -83,8 +84,8 @@ private:
    * @param p2 End poinr of the path segment
    * @return Energy consumption in Joules
    */ 
-  double calculate_straight_line_energy(double v_in, double v_out, const std::pair<double, double> &p1, const std::pair<double, double> &p2);
-public:
+  double calculate_straight_line_energy(double v_in, double v_out, const std::pair<double, double> &p1, const std::pair<double, double> &p2) const;
+
   EnergyCalculator(const energy_calculator_config_t &energy_calculator_config);
   
   /*!
@@ -95,7 +96,7 @@ public:
    * @param path Path for which the total power consumption will be calculated
    * @return The amount of spent energy to follow the whole path in Joules [J]
    */
-  double calculate_path_energy_consumption(const std::vector<std::pair<double, double>> &path);
+  double calculate_path_energy_consumption(const std::vector<std::pair<double, double>> &path) const;
    
 };
 

@@ -59,7 +59,7 @@ MapPolygon::polygon_t get_points_from_string(std::string kml_file_string) {
         if (point_string.empty()) {
             continue;
         }
-        points.push_back(string_to_point(point_string));
+        points.push_back(gps_coordinates_to_meters(string_to_point(point_string)));
     }
     make_polygon_clockwise(points);
     return points;

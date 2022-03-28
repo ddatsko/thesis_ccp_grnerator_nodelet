@@ -4,6 +4,8 @@
 #include <iostream>
 
 
+const double METERS_IN_DEGREE = 111319.5;
+
 hom_t cross_product(const hom_t &a, const hom_t &b) {
     return {std::get<1>(a) * std::get<2>(b) - std::get<2>(a) * std::get<1>(b),
             std::get<2>(a) * std::get<0>(b) - std::get<0>(a) * std::get<2>(b),
@@ -74,4 +76,20 @@ double angle_between_vectors(point_t p1, point_t p2, point_t p3) {
 double distance_between_points(point_t p1, point_t p2) {
     return std::sqrt((p1.first - p2.first) * (p1.first - p2.first) +
                      (p1.second - p2.second) * (p1.second - p2.second));
+}
+
+
+// TODO: test this
+point_t gps_coordinates_to_meters(point_t p) {
+    point_t res;
+    res.second = p.first * METERS_IN_DEGREE;
+    res.first = std::cos(p.first / 180.0 * M_PI) * p.second * METERS_IN_DEGREE;
+    return res;
+}
+
+point_t meters_to_gps_coordinates(point_t p) {
+    point_t res;
+    res.first = p.second / METERS_IN_DEGREE;
+    res.second = p.first / (std::cos(res.first / 180.0 * M_PI) * METERS_IN_DEGREE);
+    return res;
 }

@@ -11,6 +11,9 @@
 #include "custom_types.hpp"
 
 
+const char* FLY_ZONE_PLACEMARK_NAME = "fly-zone";
+const char* NO_FLY_ZONE_PLACEMARK_NAME = "no-fly-zone";
+
 struct kml_file_parse_error: public std::runtime_error {
   using runtime_error::runtime_error;
 };
@@ -27,14 +30,13 @@ struct wrong_polygon_format_error: public std::runtime_error {
 struct MapPolygon {
     using polygon_t = std::vector<point_t>;
 
-    const std::string FLY_ZONE_PLACEMARK_NAME = "fly-zone";
-    const std::string NO_FLY_ZONE_PLACEMARK_NAME = "no-fly-zone";
-
     polygon_t fly_zone_polygon_points;
     std::vector<polygon_t> no_fly_zone_polygons;
 
     MapPolygon() = default;
     MapPolygon(const MapPolygon &p);
+
+    MapPolygon& operator=(const MapPolygon &rhs) = default;
 
     void load_polygon_from_file(const std::string &filename);
 

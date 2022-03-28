@@ -5,7 +5,7 @@
 #include "Graph.hpp"
 #include "MapPolygon.hpp"
 
-using vpdd = std::vector<std::pair<double, double>>;
+using vpdd = std::vector<point_t>;
 
 struct polygon_decomposition_error: public std::runtime_error {
     using runtime_error::runtime_error;
@@ -18,7 +18,7 @@ struct polygon_decomposition_error: public std::runtime_error {
  * @param start_up Whether the first column should be covered by movement up or down
  * @return A sequence of points (longitude, latitude) that need to be visited by drone
  */
-vpdd sweeping(const Graph &g, bool start_up=false);
+std::vector<point_t> sweeping(const Graph &g, bool start_up=false);
 
 /*!
  * Decompose the MapPolygon into smaller MapPolygons using trapezoidal decomposition algorithm

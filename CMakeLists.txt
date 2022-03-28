@@ -29,7 +29,7 @@ include_directories(include
   pugixml/src
 )
 
-add_library(${FILESNAME} src/${FILESNAME}.cpp src/Graph.cpp src/MapPolygon.cpp src/utils.cpp src/algorithms.cpp pugixml/src/pugixml.cpp src/EnergyCalculator.cpp src/ShortestPathCalculator.cpp include/ShortestPathCalculator.hpp include/custom_types.hpp)
+add_library(${FILESNAME} src/${FILESNAME}.cpp src/Graph.cpp src/MapPolygon.cpp src/utils.cpp src/algorithms.cpp pugixml/src/pugixml.cpp src/EnergyCalculator.cpp src/ShortestPathCalculator.cpp include/ShortestPathCalculator.hpp include/custom_types.hpp include/mstp_solver/Target.h src/mstp_solver/TargetSet.cpp include/mstp_solver/TargetSet.h include/mstp_solver/SolverConfig.h src/mstp_solver/MtspSolver.cpp include/mstp_solver/MtspSolver.h include/mstp_solver/Insertion.h)
 
 add_dependencies(${FILESNAME} ${${FILESNAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 

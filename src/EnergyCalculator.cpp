@@ -2,7 +2,7 @@
 #include <cmath> 
 #include <algorithm>
 
-double EnergyCalculator::angle_between_points(std::pair<double, double> p0, std::pair<double, double> p1, std::pair<double, double> p2) {
+double EnergyCalculator::angle_between_points(std::pair<double, double> p0, std::pair<double, double> p1, std::pair<double, double> p2) const {
   double a = std::pow(p1.first - p0.first, 2) + std::pow(p1.second - p0.second, 2);
   double b = std::pow(p1.first - p2.first, 2) + std::pow(p1.second - p2.second, 2);
   double c = std::pow(p0.first - p2.first, 2) + std::pow(p0.second - p2.second, 2);
@@ -37,7 +37,7 @@ EnergyCalculator::EnergyCalculator(const energy_calculator_config_t &energy_calc
   v_r = v_i_h / v_r_inv;
 }
 
-double EnergyCalculator::calculate_turning_energy(double angle) {
+double EnergyCalculator::calculate_turning_energy(double angle) const {
   // Calculate the new speed, where x coordinate is the first vector direction
   // i.e. v_y == 0; new_vx == v_x if angle = 180 deg; new_vy == v_x if angle = 90 deg 
   double new_vx = v_r * std::cos(M_PI - angle);
@@ -49,7 +49,7 @@ double EnergyCalculator::calculate_turning_energy(double angle) {
   return energy_x + energy_y;
 }
 
-double EnergyCalculator::calculate_straight_line_energy(double v_in, double v_out, const std::pair<double, double> &p1, const std::pair<double, double> &p2) {
+double EnergyCalculator::calculate_straight_line_energy(double v_in, double v_out, const std::pair<double, double> &p1, const std::pair<double, double> &p2) const {
   // Calculate the time and distance travelled during the acceleration and deceleration phases
   double t_acc = (v_r - v_in) / config.average_acceleration;
   double s_acc = v_in * t_acc + 0.5 * config.average_acceleration * std::pow(t_acc, 2);
@@ -63,7 +63,7 @@ double EnergyCalculator::calculate_straight_line_energy(double v_in, double v_ou
   return (t_acc + t_dec + (s_tot - s_acc - s_dec) / v_r) * P_r;
 }
 
-double EnergyCalculator::calculate_path_energy_consumption(const std::vector<std::pair<double, double>> &path) {
+double EnergyCalculator::calculate_path_energy_consumption(const std::vector<std::pair<double, double>> &path) const {
   if (path.size() < 2) {
     return 0;
   }

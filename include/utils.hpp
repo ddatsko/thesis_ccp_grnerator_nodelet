@@ -39,6 +39,10 @@ double angle_between_vectors(point_t p1, point_t p2, point_t p3);
 
 double distance_between_points(point_t p1, point_t p2);
 
+point_t gps_coordinates_to_meters(point_t p);
+
+point_t meters_to_gps_coordinates(point_t p);
+
 /*!
  * Check if two numbers are close enough
  * @param n1 Number 1
