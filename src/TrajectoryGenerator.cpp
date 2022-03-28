@@ -84,6 +84,14 @@ namespace trajectory_generatiion {
 //        }
 
         ShortestPathCalculator shortest_path_calculator{polygon};
+        point_t p1 = {1, 0.6};
+        point_t p2 = {6.5, 5.5};
+        auto path = shortest_path_calculator.get_approximate_shortest_path(p1, p2);
+        std::cout << "PATH: " << std::endl;
+        for (const auto &p: path) {
+            std::cout << p.first << ", " << p.second << std::endl;
+        }
+
 
 //        std::cout << "Intersect: " <<  segments_intersect({{0, 0}, {5.16, 3.17}}, {{1, 3.5}, {1, 5}}) << std::endl;
 

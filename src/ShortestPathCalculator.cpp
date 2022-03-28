@@ -74,23 +74,23 @@ namespace {
 
 ShortestPathCalculator::ShortestPathCalculator(const MapPolygon &polygon) {
     auto points_tmp = polygon.get_all_points();
-    std::vector<point_t> polygon_points{points_tmp.begin(), points_tmp.end()};
+    m_polygon_points = std::vector<point_t>{points_tmp.begin(), points_tmp.end()};
     m_polygon_segments = polygon.get_all_segments();
 
     // Assign each point a unique identifier to be able to quickly traverse through it
     int index = 0;
-    for (const auto &p: polygon_points) {
+    for (const auto &p: m_polygon_points) {
         m_point_index[p] = index++;
     }
 
     // Create a 2-d matrix that will contain paths for the shortest path between each of perimeter point
     // And 2-d matrix for the Floyd-Warshall algorithm
-    m_next_vertex_in_path = std::vector<std::vector<int>>(polygon_points.size());
+    m_next_vertex_in_path = std::vector<std::vector<size_t>>(m_polygon_points.size());
     std::for_each(m_next_vertex_in_path.begin(), m_next_vertex_in_path.end(),
-                  [&](auto &row) { row = std::vector<int>(polygon_points.size(), -1); });
-    m_floyd_warshall_d = std::vector<std::vector<double>>(polygon_points.size());
+                  [&](auto &row) { row = std::vector<size_t>(m_polygon_points.size(), -1); });
+    m_floyd_warshall_d = std::vector<std::vector<double>>(m_polygon_points.size());
     std::for_each(m_floyd_warshall_d.begin(), m_floyd_warshall_d.end(),
-                  [&](auto &row){row = std::vector<double>(polygon_points.size(), HUGE_VAL);});
+                  [&](auto &row){row = std::vector<double>(m_polygon_points.size(), HUGE_VAL);});
 
     // Get the list of pairs of points, for which there is no direct path even if they can "see" each other
     auto no_direct_path_pairs = no_direct_path(polygon);
@@ -102,11 +102,11 @@ ShortestPathCalculator::ShortestPathCalculator(const MapPolygon &polygon) {
 //    std::cout << "------------------------" << std::endl;
 
     // O(N^3) building of the matrix. Ok as the algorithm itself runs on O(N^3)
-    for (size_t i = 0; i < polygon_points.size(); i++) {
+    for (size_t i = 0; i < m_polygon_points.size(); i++) {
         m_floyd_warshall_d[i][i] = 0;
-        for (size_t j = i + 1; j < polygon_points.size(); j++) {
-            segment_t segment_between_point = {polygon_points[i], polygon_points[j]};
-            if (polygon_points[i] == polygon_points[j]) {
+        for (size_t j = i + 1; j < m_polygon_points.size(); j++) {
+            segment_t segment_between_point = {m_polygon_points[i], m_polygon_points[j]};
+            if (m_polygon_points[i] == m_polygon_points[j]) {
                 continue;
             }
 //            std::cout << "Checking points: " << segment_between_point.first.first << "," << segment_between_point.first.second << "   " <<
@@ -146,8 +146,8 @@ ShortestPathCalculator::ShortestPathCalculator(const MapPolygon &polygon) {
             if (!segment_intersects) {
                 // Update Floyd Warshall algorithm matrix
                 m_floyd_warshall_d[i][j] = m_floyd_warshall_d[j][i] = segment_length(segment_between_point);
-                m_next_vertex_in_path[i][j] = static_cast<int>(j);
-                m_next_vertex_in_path[j][i] = static_cast<int>(i);
+                m_next_vertex_in_path[i][j] = j;
+                m_next_vertex_in_path[j][i] = i;
             }
         }
     }
@@ -190,8 +190,57 @@ void ShortestPathCalculator::run_floyd_warshall() {
     }
 }
 
+std::vector<point_t> ShortestPathCalculator::get_approximate_shortest_path(point_t p1, point_t p2) {
+    point_t closest_to_start = closest_polygon_point(p1);
+    point_t closest_to_end = closest_polygon_point(p2);
+    std::cout << "CLOSEST: " << std::endl;
+    std::cout << closest_to_start.first << ", " << closest_to_start.second << std::endl;
+    std::cout << closest_to_end.first << ", " << closest_to_end.second << std::endl;
+
+    auto path_between_closest = shortest_path_between_polygon_nodes(m_point_index[closest_to_start], m_point_index[closest_to_end]);
+    // TODO: can check if the second path point can be reached directly from p1 to make path feasible
+
+    // If there is only one point
+    if (path_between_closest.size() <= 2) {
+        return std::vector<point_t> {p1, p2};
+    }
+    path_between_closest[0] = p1;
+    path_between_closest[path_between_closest.size() - 1] = p2;
+    return path_between_closest;
+
+}
+
+point_t ShortestPathCalculator::closest_polygon_point(point_t p) {
+    if (m_polygon_points.empty()) {
+        throw shortest_path_calculation_error("No point in the polygon found");
+    }
+    point_t closest_point = m_point_index.begin()->first;
+    double closest_distance = distance_between_points(closest_point, p);
+    for (const auto &point: m_polygon_points) {
+        double new_distance = distance_between_points(point, p);
+        if (new_distance < closest_distance) {
+            closest_distance = new_distance;
+            closest_point = point;
+        }
+    }
+    return closest_point;
+}
 
 
+std::vector<point_t> ShortestPathCalculator::shortest_path_between_polygon_nodes(size_t i, size_t j) {
+    std::vector<point_t> res;
+    while (i != j) {
+        res.push_back(m_polygon_points[i]);
+        i = m_next_vertex_in_path[i][j];
+    }
+    res.push_back(m_polygon_points[j]);
+    return res;
+}
+
+std::vector<point_t> ShortestPathCalculator::shortest_path_between_points(point_t p1, point_t p2) {
+    // TODO: implement the real algorithm for shortest path (will be O(n^2), i guess)
+    return get_approximate_shortest_path(p1, p2);
+}
 
 
 

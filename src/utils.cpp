@@ -22,7 +22,8 @@ std::pair<double, double> segment_line_intersection(const std::pair<double, doub
 }
 
 std::pair<double, double> rotate_point(std::pair<double, double> p, double angle) {
-  return {p.first * std::cos(angle) - p.second * std::sin(angle), p.second * std::cos(angle) + p.first * std::sin(angle)};
+    return {p.first * std::cos(angle) - p.second * std::sin(angle),
+            p.second * std::cos(angle) + p.first * std::sin(angle)};
 }
 
 
@@ -45,10 +46,10 @@ bool segments_intersect(const segment_t &s1, const segment_t &s2) {
            intersection.first <= std::max(s1.first.first, s1.second.first) &&
            intersection.first >= std::min(s2.first.first, s2.second.first) &&
            intersection.first <= std::max(s2.first.first, s2.second.first) &&
-            intersection.second >= std::min(s1.first.second, s1.second.second) &&
-            intersection.second <= std::max(s1.first.second, s1.second.second) &&
-            intersection.second >= std::min(s2.first.second, s2.second.second) &&
-            intersection.second <= std::max(s2.first.second, s2.second.second);
+           intersection.second >= std::min(s1.first.second, s1.second.second) &&
+           intersection.second <= std::max(s1.first.second, s1.second.second) &&
+           intersection.second >= std::min(s2.first.second, s2.second.second) &&
+           intersection.second <= std::max(s2.first.second, s2.second.second);
 }
 
 
@@ -68,4 +69,9 @@ double angle_between_vectors(point_t p1, point_t p2, point_t p3) {
         angle += 2 * M_PI;
     }
     return angle;
+}
+
+double distance_between_points(point_t p1, point_t p2) {
+    return std::sqrt((p1.first - p2.first) * (p1.first - p2.first) +
+                     (p1.second - p2.second) * (p1.second - p2.second));
 }
