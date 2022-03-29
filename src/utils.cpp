@@ -12,8 +12,8 @@ hom_t cross_product(const hom_t &a, const hom_t &b) {
             std::get<0>(a) * std::get<1>(b) - std::get<1>(a) * std::get<0>(b)};
 }
 
-std::pair<double, double> segment_line_intersection(const std::pair<double, double> &p1,
-                                                    const std::pair<double, double> &p2,
+point_t segment_line_intersection(const point_t &p1,
+                                                    const point_t &p2,
                                                     const hom_t &line) {
     hom_t p1_h = {p1.first, p1.second, 1};
     hom_t p2_h = {p2.first, p2.second, 1};
@@ -22,6 +22,8 @@ std::pair<double, double> segment_line_intersection(const std::pair<double, doub
     return {std::get<0>(p_intersection_h) / std::get<2>(p_intersection_h),
             std::get<1>(p_intersection_h) / std::get<2>(p_intersection_h)};
 }
+
+
 
 std::pair<double, double> rotate_point(std::pair<double, double> p, double angle) {
     return {p.first * std::cos(angle) - p.second * std::sin(angle),
@@ -40,6 +42,7 @@ double segment_length(const segment_t &segment) {
     return std::sqrt(std::pow(segment.second.first - segment.first.first, 2) +
                      std::pow(segment.second.second - segment.first.second, 2));
 }
+
 
 bool segments_intersect(const segment_t &s1, const segment_t &s2) {
     auto intersection = segment_segment_intersection(s1, s2);
@@ -82,14 +85,14 @@ double distance_between_points(point_t p1, point_t p2) {
 // TODO: test this
 point_t gps_coordinates_to_meters(point_t p) {
     point_t res;
-    res.second = p.first * METERS_IN_DEGREE;
-    res.first = std::cos(p.first / 180.0 * M_PI) * p.second * METERS_IN_DEGREE;
+    res.first = p.first * METERS_IN_DEGREE;
+    res.second = std::cos(p.first / 180.0 * M_PI) * p.second * METERS_IN_DEGREE;
     return res;
 }
 
 point_t meters_to_gps_coordinates(point_t p) {
     point_t res;
-    res.first = p.second / METERS_IN_DEGREE;
-    res.second = p.first / (std::cos(res.first / 180.0 * M_PI) * METERS_IN_DEGREE);
+    res.first = p.first / METERS_IN_DEGREE;
+    res.second = p.second / (std::cos(res.first / 180.0 * M_PI) * METERS_IN_DEGREE);
     return res;
 }

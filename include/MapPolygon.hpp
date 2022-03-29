@@ -11,9 +11,6 @@
 #include "custom_types.hpp"
 
 
-const char* FLY_ZONE_PLACEMARK_NAME = "fly-zone";
-const char* NO_FLY_ZONE_PLACEMARK_NAME = "no-fly-zone";
-
 struct kml_file_parse_error: public std::runtime_error {
   using runtime_error::runtime_error;
 };
@@ -71,7 +68,7 @@ struct MapPolygon {
      * Find the edge starting from the first rightmost point
      * @return Edge starting from the first rightmost point
      */
-    [[nodiscard]] std::pair<point_t, point_t> rightmost_edge();
+    [[nodiscard]] std::pair<point_t, point_t> rightmost_edge() const;
 
 
     //TODO: implement reducing all the points and not only ones of the outer perimeter

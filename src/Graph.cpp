@@ -29,30 +29,16 @@ Graph::Graph(const MapPolygon &map_polygon, double rotation_angle, double step):
         std::vector<double> segments_intersection_x_coord;
         hom_t horizontal_line = {0, 1, -y};
 
-        // TODO: rewrite this without copying of the code
         // Find out all the x coordinates of points of the intersection of horizontal line with any zones boundaries
-        for (size_t i = 0; i < map_polygon_rotated.fly_zone_polygon_points.size() - 1; i++) {
-            auto intersection_x = segment_line_intersection(map_polygon_rotated.fly_zone_polygon_points[i], map_polygon_rotated.fly_zone_polygon_points[i + 1], horizontal_line).first;
-            if ((intersection_x <= map_polygon_rotated.fly_zone_polygon_points[i].first and
-                 intersection_x >= map_polygon_rotated.fly_zone_polygon_points[i + 1].first) or
-                (intersection_x <= map_polygon_rotated.fly_zone_polygon_points[i + 1].first and
-                 intersection_x >= map_polygon_rotated.fly_zone_polygon_points[i].first)) {
+        auto polygon_segments = map_polygon_rotated.get_all_segments();
 
+        for (const auto &segment: polygon_segments) {
+            if ((y <= segment.first.second && y >= segment.second.second) ||
+                    (y >= segment.first.second && y <= segment.second.second)) {
+
+                double intersection_x = segment.second.first - ((segment.second.second - y) * (segment.second.first - segment.first.first)) /
+                        (segment.second.second - segment.first.second);
                 segments_intersection_x_coord.push_back(intersection_x);
-            }
-        }
-
-        // Find out all the intersections with no-fly zone polygons
-        for (auto &no_fly_zone_polygon: map_polygon_rotated.no_fly_zone_polygons) {
-            for (size_t i = 0; i < no_fly_zone_polygon.size() - 1; i++) {
-                auto intersection_x = segment_line_intersection(no_fly_zone_polygon[i], no_fly_zone_polygon[i + 1], horizontal_line).first;
-                if ((intersection_x <= no_fly_zone_polygon[i].first and
-                     intersection_x >= no_fly_zone_polygon[i + 1].first) or
-                    (intersection_x <= no_fly_zone_polygon[i + 1].first and
-                     intersection_x >= no_fly_zone_polygon[i].first)) {
-
-                    segments_intersection_x_coord.push_back(intersection_x);
-                }
             }
         }
         // Sort all the x coordinates

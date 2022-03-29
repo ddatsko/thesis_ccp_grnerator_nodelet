@@ -44,12 +44,6 @@ struct energy_calculator_config_t {
 
 class EnergyCalculator {
 private:
-  const double AIR_DENSITY = 1.225; // [kg/m^3]
-  const double EARTH_GRAVITY = 9.8; //[m/s^2, N/kg]
-  const double PROPELLER_EFFICIENCY = 0.54; // Usually from 0.5 to 0.7
-  const double RANGE_POWER_CONSUMPTION_COEFF = 1.092; // taken from (17), ratio of power consumption when maximizing the range to power consumption on hover
-  const double MOTOR_EFFICIENCY = 0.75; // Efficiency of the motor (ratio of electric power converted to mechanical)
-
   energy_calculator_config_t config;
   double v_r; // speed at which the drone can cover the longest range [m/s]
   double t_r; // Time during thich the drone can fly with the speed v_r [s]

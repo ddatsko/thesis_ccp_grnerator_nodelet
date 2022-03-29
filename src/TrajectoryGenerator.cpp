@@ -11,9 +11,8 @@
 #include <vector>
 #include "utils.hpp"
 #include "ShortestPathCalculator.hpp"
-
-long long METERS_IN_LON_DEGREE = 111000;
-long long METERS_IN_LAT_DEGREE = 111000;
+#include "mstsp_solver/SolverConfig.h"
+#include "mstsp_solver/MstspSolver.h"
 
 namespace trajectory_generatiion {
 
@@ -78,10 +77,10 @@ namespace trajectory_generatiion {
             ros::shutdown();
             return;
         }
-//        std::cout << "Points: " << std::endl;
-//        for (auto &p: polygon.fly_zone_polygon_points) {
-//            std::cout << p.first << " " << p.second << std::endl;
-//        }
+        std::cout << "Points: " << std::endl;
+        for (auto &p: polygon.fly_zone_polygon_points) {
+            std::cout << p.first << " " << p.second << std::endl;
+        }
 
         ShortestPathCalculator shortest_path_calculator{polygon};
         point_t p1 = {1, 0.6};
@@ -90,6 +89,14 @@ namespace trajectory_generatiion {
         std::cout << "PATH: " << std::endl;
         for (const auto &p: path) {
             std::cout << p.first << ", " << p.second << std::endl;
+        }
+
+        auto g = Graph(polygon, 0, 30);
+        for (size_t i = 0; i < g.get_height(); ++i) {
+            for (size_t j = 0; j < g.get_width(); ++j) {
+                std::cout << (g(i, j) ? '1' : '0') << " ";
+            }
+            std::cout << std::endl;
         }
 
 
@@ -119,6 +126,26 @@ namespace trajectory_generatiion {
             }
             of.close();
         }
+        std::cout << "Decomposed..." << std::endl;
+
+        EnergyCalculator energy_calculator(m_energy_config);
+        point_t starting_point = gps_coordinates_to_meters({m_simulation_start_long, m_simulation_start_lat});
+        mstsp_solver::SolverConfig solver_config {{0}, 30, starting_point, 3};
+        mstsp_solver::MstspSolver solver(solver_config, polygons_decomposed, energy_calculator);
+
+        auto uav_paths = solver.solve();
+
+
+        for (size_t i = 0; i < uav_paths.size(); ++i) {
+            std::stringstream filename_ss;
+            filename_ss << "/home/mrs/polygons/uav" << i << ".csv";
+            std::ofstream of(filename_ss.str());
+            for (const auto &p: uav_paths[i]) {
+                of << std::setprecision(10) << p.first << ", " << std::setprecision(10) << p.second << std::endl;
+            }
+        }
+
+
 
 
         ROS_INFO("[TrajectoryGenerator]: successfully loaded polygon from KML file");
@@ -198,11 +225,12 @@ mrs_msgs::Path TrajectoryGenerator::_generate_path_for_simulation_one_drone(std:
 
   std::vector<mrs_msgs::Reference> points;
 
-  for (auto &p: points_to_visit) {
+  for (const auto &p: points_to_visit) {
     mrs_msgs::Reference point_3d;
     point_3d.heading = 1;
-    point_3d.position.x = (p.first * METERS_IN_LAT_DEGREE) - (m_simulation_start_lat * METERS_IN_LAT_DEGREE);
-    point_3d.position.y = (p.second * METERS_IN_LON_DEGREE) - (m_simulation_start_long * METERS_IN_LON_DEGREE);
+
+//    point_3d.position.x = (p.first * METERS_IN_LAT_DEGREE) - (m_simulation_start_lat * METERS_IN_LAT_DEGREE);
+//    point_3d.position.y = (p.second * METERS_IN_LON_DEGREE) - (m_simulation_start_long * METERS_IN_LON_DEGREE);
     point_3d.position.z = m_drones_altitude;
     points.push_back(point_3d);
   }

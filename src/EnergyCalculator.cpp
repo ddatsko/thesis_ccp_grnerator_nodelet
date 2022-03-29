@@ -2,6 +2,14 @@
 #include <cmath> 
 #include <algorithm>
 
+namespace {
+    const double AIR_DENSITY = 1.225; // [kg/m^3]
+    const double EARTH_GRAVITY = 9.8; //[m/s^2, N/kg]
+    const double PROPELLER_EFFICIENCY = 0.54; // Usually from 0.5 to 0.7
+    const double RANGE_POWER_CONSUMPTION_COEFF = 1.092; // taken from (17), ratio of power consumption when maximizing the range to power consumption on hover
+    const double MOTOR_EFFICIENCY = 0.75; // Efficiency of the motor (ratio of electric power converted to mechanical)
+}
+
 double EnergyCalculator::angle_between_points(std::pair<double, double> p0, std::pair<double, double> p1, std::pair<double, double> p2) const {
   double a = std::pow(p1.first - p0.first, 2) + std::pow(p1.second - p0.second, 2);
   double b = std::pow(p1.first - p2.first, 2) + std::pow(p1.second - p2.second, 2);

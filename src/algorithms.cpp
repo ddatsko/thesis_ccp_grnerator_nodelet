@@ -1,9 +1,4 @@
 #include "algorithms.hpp"
-#include <iostream>
-#include <queue>
-#include <iomanip>
-#include <stack>
-#include <set>
 #include <algorithm>
 #include "custom_types.hpp"
 
@@ -256,9 +251,6 @@ std::vector<MapPolygon> trapezoidal_decomposition(const MapPolygon &polygon, boo
         if (!segment_found) {
             throw polygon_decomposition_error("Checkpoint does not belong to any polygon..");
         }
-
-
-
     }
 
     return res;

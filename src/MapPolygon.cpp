@@ -8,6 +8,9 @@
 
 
 namespace {
+    const std::string FLY_ZONE_PLACEMARK_NAME = "fly-zone";
+    const std::string NO_FLY_ZONE_PLACEMARK_NAME = "no-fly-zone";
+
     point_t string_to_point(const std::string &point_string) {
         size_t coma_pos;
         point_t point;
@@ -60,7 +63,9 @@ MapPolygon::polygon_t get_points_from_string(std::string kml_file_string) {
             continue;
         }
         points.push_back(gps_coordinates_to_meters(string_to_point(point_string)));
+//        points.push_back(string_to_point(point_string));
     }
+
     make_polygon_clockwise(points);
     return points;
 }
@@ -89,7 +94,6 @@ void MapPolygon::load_polygon_from_file(const std::string &filename) {
         auto placemark_polygon_points = get_points_from_string(
                 placemark.child("Polygon").child("outerBoundaryIs").child("LinearRing").child(
                         "coordinates").text().as_string());
-
         if (placemark.child("name").text().as_string() == FLY_ZONE_PLACEMARK_NAME) {
             fly_zone_found = true;
             fly_zone_polygon_points = placemark_polygon_points;
@@ -186,7 +190,7 @@ std::pair<point_t, point_t> MapPolygon::point_neighbors(point_t point) const {
     throw non_existing_point_error("Point is not in the polygon");
 }
 
-[[nodiscard]] std::pair<point_t, point_t> MapPolygon::rightmost_edge() {
+[[nodiscard]] std::pair<point_t, point_t> MapPolygon::rightmost_edge() const {
     double rightmost_x = fly_zone_polygon_points[0].first;
     for (const auto &point: fly_zone_polygon_points) {
         rightmost_x = std::max(rightmost_x, point.first);
