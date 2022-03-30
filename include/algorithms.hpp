@@ -14,11 +14,13 @@ struct polygon_decomposition_error: public std::runtime_error {
 /*!
  * Calculate the sweeping path to cover the graph g
  * NOTE: If the area to cover is not a convex polygon, the algorithm will produce not a full coverage path
- * @param g Graph that needs to be covered
+ * @param polygon: Polygon with only fly-zone that should be swept
+ * @param angle: angle of sweeping lines
+ * @param sweeping_step distance between sweeping lines
  * @param start_up Whether the first column should be covered by movement up or down
  * @return A sequence of points (longitude, latitude) that need to be visited by drone
  */
-std::vector<point_t> sweeping(const Graph &g, bool start_up=false);
+vpdd sweeping(const MapPolygon &polygon, double angle, double sweeping_step, bool start_up=false);
 
 /*!
  * Decompose the MapPolygon into smaller MapPolygons using trapezoidal decomposition algorithm

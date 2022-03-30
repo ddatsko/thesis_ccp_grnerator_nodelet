@@ -130,7 +130,7 @@ namespace trajectory_generatiion {
 
         EnergyCalculator energy_calculator(m_energy_config);
         point_t starting_point = gps_coordinates_to_meters({m_simulation_start_long, m_simulation_start_lat});
-        mstsp_solver::SolverConfig solver_config {{0}, 30, starting_point, 3};
+        mstsp_solver::SolverConfig solver_config {{0}, 5, starting_point, 3};
         mstsp_solver::MstspSolver solver(solver_config, polygons_decomposed, energy_calculator);
 
         auto uav_paths = solver.solve();

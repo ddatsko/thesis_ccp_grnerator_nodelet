@@ -115,7 +115,8 @@ namespace {
 }
 
 
-vpdd sweeping(const Graph &g, bool start_up) {
+vpdd sweeping(const MapPolygon &polygon, double angle, double sweeping_step, bool start_up) {
+    Graph g(polygon, angle, sweeping_step);
     const size_t w = g.get_width(), h = g.get_height();
     vpdd res_path;
 
@@ -135,6 +136,11 @@ vpdd sweeping(const Graph &g, bool start_up) {
         }
 
     }
+    //TODO: find out what ro do in the situation when the polygon is so thin, that we cannot do any sweeping. For now -- just add one
+    if (res_path.empty()) {
+        res_path.push_back(polygon.fly_zone_polygon_points[0]);
+    }
+
     return res_path;
 }
 

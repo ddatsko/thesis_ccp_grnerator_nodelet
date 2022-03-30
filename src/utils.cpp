@@ -84,15 +84,17 @@ double distance_between_points(point_t p1, point_t p2) {
 
 // TODO: test this
 point_t gps_coordinates_to_meters(point_t p) {
+    std::cout << "P: " << p.first << " " << p.second << "RES: ";
     point_t res;
-    res.first = p.first * METERS_IN_DEGREE;
-    res.second = std::cos(p.first / 180.0 * M_PI) * p.second * METERS_IN_DEGREE;
+    res.second = p.second * METERS_IN_DEGREE;
+    res.first = std::cos((p.second / 180.0) * M_PI) * p.first * METERS_IN_DEGREE;
+    std::cout << res.first << " " << res.second << std::endl;
     return res;
 }
 
 point_t meters_to_gps_coordinates(point_t p) {
     point_t res;
-    res.first = p.first / METERS_IN_DEGREE;
-    res.second = p.second / (std::cos(res.first / 180.0 * M_PI) * METERS_IN_DEGREE);
+    res.second = p.second / METERS_IN_DEGREE;
+    res.first = p.first / (std::cos(res.second / 180.0 * M_PI) * METERS_IN_DEGREE);
     return res;
 }

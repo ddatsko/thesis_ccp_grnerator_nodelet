@@ -22,17 +22,9 @@ namespace mstsp_solver {
                 std::cout << std::setprecision(15) << p.first << ", " << p.second << std::endl;
             }
 
-            auto graph_from_polygon = Graph(polygon, angle, sweeping_step);
-            for (size_t i = 0; i < graph_from_polygon.get_height(); ++i) {
-                for (size_t j = 0; j < graph_from_polygon.get_width(); ++j) {
-                    std::cout << (graph_from_polygon(i, j) ? '1' : '0') << " ";
-                }
-                std::cout << std::endl;
-            }
-
 
             for (int i = 0; i < 2; i++) {
-                auto sweeping_path = sweeping(graph_from_polygon, static_cast<bool>(i));
+                auto sweeping_path = sweeping(polygon, angle, sweeping_step, static_cast<bool>(i));
                 double path_energy = energy_calculator.calculate_path_energy_consumption(sweeping_path);
                 if (sweeping_path.empty()) {
                     std::cout << "Sweeping path empty";
