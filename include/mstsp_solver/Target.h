@@ -15,6 +15,11 @@ namespace mstsp_solver {
         point_t starting_point;
         point_t end_point;
         size_t target_set_index;
+        size_t target_index;
+
+        bool operator==(const Target &rhs) const {
+            return target_index == rhs.target_index && target_set_index == rhs.target_set_index;
+        }
     };
 }
 

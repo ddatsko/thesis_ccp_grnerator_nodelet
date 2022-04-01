@@ -43,6 +43,8 @@ point_t gps_coordinates_to_meters(point_t p);
 
 point_t meters_to_gps_coordinates(point_t p);
 
+int generate_random_number();
+
 /*!
  * Check if two numbers are close enough
  * @param n1 Number 1

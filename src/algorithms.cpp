@@ -1,5 +1,6 @@
 #include "algorithms.hpp"
 #include <algorithm>
+#include <utils.hpp>
 #include "custom_types.hpp"
 
 
@@ -116,30 +117,53 @@ namespace {
 
 
 vpdd sweeping(const MapPolygon &polygon, double angle, double sweeping_step, bool start_up) {
-    Graph g(polygon, angle, sweeping_step);
-    const size_t w = g.get_width(), h = g.get_height();
+    auto rotated_polygon = polygon.rotated(angle);
     vpdd res_path;
-
-    int dy = start_up ? -1 : 1;
-    size_t row = start_up ? (h - 1) : 0;
-    size_t col = 0;
-    while (col < w) {
-        if (g(row, col)) {
-            res_path.push_back(g.get_point_coords(row, col));
-        }
-        if ((row == 0 && dy == -1) || (row + dy == h)) {
-            col++;
-            dy *= -1;
-            row = (dy == -1) ? (h - 1) : 0;
-        } else {
-            row += dy;
-        }
-
+    double leftmost_border = std::numeric_limits<double>::max();
+    for (const auto &p: rotated_polygon.get_all_points()) {
+        leftmost_border = std::min(leftmost_border, p.first);
     }
+    double current_x = leftmost_border + sweeping_step / 2;
+    bool current_direction_up = start_up;
+
+    while (true) {
+        std::set<double> intersection_ys;
+        for (const auto &segment: rotated_polygon.get_all_segments()) {
+            hom_t vertical_line = {1, 0, -current_x};
+            if ((segment.first.first < current_x && segment.second.first < current_x) ||
+                    (segment.first.first > current_x && segment.second.first > current_x)) {
+                continue;
+            }
+            auto intersection = segment_line_intersection(segment.first, segment.second, vertical_line);
+            intersection_ys.insert(intersection.second);
+        }
+        if (intersection_ys.size() <= 1) {
+            break;
+        }
+        double lower_y = *intersection_ys.begin();
+        double upper_y = *(++intersection_ys.begin());
+        if (upper_y - lower_y < sweeping_step) {
+            res_path.emplace_back(current_x, (upper_y + lower_y) / 2);
+        } else {
+            if (current_direction_up) {
+                res_path.emplace_back(current_x, lower_y + sweeping_step / 2);
+                res_path.emplace_back(current_x, upper_y - sweeping_step / 2);
+                current_direction_up = false;
+            } else {
+                res_path.emplace_back(current_x, upper_y - sweeping_step / 2);
+                res_path.emplace_back(current_x, lower_y + sweeping_step / 2);
+                current_direction_up = true;
+            }
+        }
+        current_x += sweeping_step;
+    }
+
     //TODO: find out what ro do in the situation when the polygon is so thin, that we cannot do any sweeping. For now -- just add one
     if (res_path.empty()) {
-        res_path.push_back(polygon.fly_zone_polygon_points[0]);
+        res_path.push_back(rotated_polygon.fly_zone_polygon_points[0]);
     }
+
+    std::for_each(res_path.begin(), res_path.end(), [angle](auto &p){p = rotate_point(p, -angle);});
 
     return res_path;
 }

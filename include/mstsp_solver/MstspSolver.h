@@ -60,7 +60,7 @@ namespace mstsp_solver {
         void find_best_target_at_positio(solution_t &solution, size_t uav, size_t path_index);
 
         void find_best_targets_for_position(solution_t &solution, size_t uav1, size_t path_index_1,
-                                              size_t uav2, size_t path_index_2);
+                                              size_t uav2, size_t path_index_2) const;
 
     public:
         MstspSolver(SolverConfig config,

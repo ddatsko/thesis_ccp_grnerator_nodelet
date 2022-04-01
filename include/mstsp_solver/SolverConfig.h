@@ -15,6 +15,10 @@ namespace mstsp_solver {
         point_t starting_point;
         size_t n_uavs;
 
+        int p1 = 1;
+        int p2 = 5;
+        int R_T = 20;
+        int w0 = 5;
     };
 }
 #endif //THESIS_TRAJECTORY_GENERATOR_SOLVERCONFIG_H

@@ -2,6 +2,7 @@
 #include <vector>
 #include <cmath>
 #include <iostream>
+#include <random>
 
 
 const double METERS_IN_DEGREE = 111319.5;
@@ -97,4 +98,12 @@ point_t meters_to_gps_coordinates(point_t p) {
     res.second = p.second / METERS_IN_DEGREE;
     res.first = p.first / (std::cos(res.second / 180.0 * M_PI) * METERS_IN_DEGREE);
     return res;
+}
+
+int generate_random_number() {
+    static std::random_device rd;
+    static std::mt19937 generator(rd());
+    static std::uniform_int_distribution<int> distribution(0, std::numeric_limits<int>::max());
+
+    return distribution(generator);
 }
