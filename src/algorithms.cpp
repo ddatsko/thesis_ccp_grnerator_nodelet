@@ -20,7 +20,7 @@ namespace {
      */
     MapPolygon polygon_from_2_segments(segment_t s1, segment_t s2, double x) {
         MapPolygon polygon;
-        if (s1.first.second > s2.first.second) {
+        if (s1.first.second > s2.first.second || s1.second.second > s2.second.second) {
             std::swap(s1, s2);
         }
         // Triangle with one point in the left
@@ -66,11 +66,12 @@ namespace {
      *    So, points are in clockwise order, starting with lower of left point (there are at leads 2 of them)
      * @param polygons Set of polygons
      * @param polygon New polygon to be added
+     * @param decomposition_type Type of the decomposition according to which he polygon will be added
      */
     void add_polygon(std::vector<MapPolygon> &polygons, const MapPolygon &new_polygon,
-                     bool merge_to_boustrophedon = true) {
+                     decomposition_type_t decomposition_type) {
         // Just add polygon if there is no need to merge them
-        if (!merge_to_boustrophedon) {
+        if (decomposition_type == TRAPEZOIDAL_DECOMPOSITION) {
             polygons.push_back(new_polygon);
             return;
         }
@@ -95,6 +96,7 @@ namespace {
             // If merging edge matches
             if (rightmost_edge.second == merging_edge.first &&
                 rightmost_edge.first == merging_edge.second) {
+                auto p_old = p;
 
                 // Insert edge of the new polygon between merging edge ends excluding duplicates
                 p.fly_zone_polygon_points.insert(
@@ -102,11 +104,15 @@ namespace {
                                   rightmost_edge.second),
                         new_polygon.fly_zone_polygon_points.begin() + static_cast<long>(2),
                         new_polygon.fly_zone_polygon_points.end() - 1);
+
+                if (decomposition_type==BOUSTROPHEDON_WITH_CONVEX_POLYGONS && !polygon_convex(p.fly_zone_polygon_points)) {
+                    p = p_old;
+                    polygons.push_back(new_polygon);
+                }
                 inserted = true;
                 break;
             }
         }
-
         // If an appropriate polygon for merging was not found - just add the polygon to list
         if (!inserted) {
             polygons.push_back(new_polygon);
@@ -171,7 +177,7 @@ vpdd sweeping(const MapPolygon &polygon, double angle, double sweeping_step, boo
 
 // NOTE: this function assumes that all the non-fly zones are located inside the fly-zone area,
 // and no non-fly zones overlap
-std::vector<MapPolygon> trapezoidal_decomposition(const MapPolygon &polygon, bool merge_to_boustrophedon) {
+std::vector<MapPolygon> trapezoidal_decomposition(const MapPolygon &polygon, decomposition_type_t decomposition_type) {
     // Generate a set of all the points of both fly-zone and non-fly-zone polygons
     const auto points = polygon.get_all_points();
     std::vector<MapPolygon> res;
@@ -200,7 +206,7 @@ std::vector<MapPolygon> trapezoidal_decomposition(const MapPolygon &polygon, boo
                     if (i % 2 == 1) {
                         MapPolygon polygon_chunk = polygon_from_2_segments(current_segments[i - 1], current_segments[i],
                                                                            x);
-                        add_polygon(res, polygon_chunk, merge_to_boustrophedon);
+                        add_polygon(res, polygon_chunk, decomposition_type);
                         current_segments[i - 1].first = {x, vertical_line_segment_intersection(current_segments[i - 1],
                                                                                                x)};
                         current_segments[i].first = {x, vertical_line_segment_intersection(current_segments[i], x)};
@@ -230,16 +236,16 @@ std::vector<MapPolygon> trapezoidal_decomposition(const MapPolygon &polygon, boo
                     // last two converging segments
                     if (i % 2 == 0) {
                         add_polygon(res, polygon_from_2_segments(current_segments[i], current_segments[i + 1], x),
-                                    merge_to_boustrophedon);
+                                    decomposition_type);
                         current_segments.erase(current_segments.begin() + static_cast<long>(i));
                         current_segments.erase(current_segments.begin() + static_cast<long>(i));
                         break;
                     }
 
                     add_polygon(res, polygon_from_2_segments(current_segments[i], current_segments[i - 1], x),
-                                merge_to_boustrophedon);
+                                decomposition_type);
                     add_polygon(res, polygon_from_2_segments(current_segments[i + 1], current_segments[i + 2], x),
-                                merge_to_boustrophedon);
+                                decomposition_type);
                     current_segments[i - 1].first = {x, vertical_line_segment_intersection(current_segments[i - 1], x)};
                     current_segments[i + 2].first = {x, vertical_line_segment_intersection(current_segments[i + 2], x)};
                     current_segments.erase(current_segments.begin() + static_cast<long>(i));
@@ -265,12 +271,12 @@ std::vector<MapPolygon> trapezoidal_decomposition(const MapPolygon &polygon, boo
                 if (i % 2 == 0) {
                     // The gap between segments[i] and segments[i + 1] is the fly-zone
                     add_polygon(res, polygon_from_2_segments(current_segments[i], current_segments[i + 1], x),
-                                merge_to_boustrophedon);
+                                decomposition_type);
                     current_segments[i + 1].first = {x, vertical_line_segment_intersection(current_segments[i + 1], x)};
                 } else {
                     // The gap between segments[i] and segments[i - 1] is the fly-zone
                     add_polygon(res, polygon_from_2_segments(current_segments[i], current_segments[i - 1], x),
-                                merge_to_boustrophedon);
+                                decomposition_type);
                     current_segments[i - 1].first = {x, vertical_line_segment_intersection(current_segments[i - 1], x)};
                 }
                 current_segments[i] = {p, neighbors.second};

@@ -80,7 +80,8 @@ public:
    */ 
   double calculate_straight_line_energy(double v_in, double v_out, const std::pair<double, double> &p1, const std::pair<double, double> &p2) const;
 
-  EnergyCalculator(const energy_calculator_config_t &energy_calculator_config);
+  explicit EnergyCalculator(const energy_calculator_config_t &energy_calculator_config);
+  EnergyCalculator() = delete;
   
   /*!
    * Calculate the total energy spent to follow the path

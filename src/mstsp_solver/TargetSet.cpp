@@ -16,20 +16,15 @@ namespace mstsp_solver {
                                                                        energy_calculator(energy_calculator) {
 //        std::cout << "ROtation angles in set: " << rotation_angles.size() << std::endl;
         for (auto angle: rotation_angles) {
-
-//            std::cout << "Polygon for sweeping with step " << sweeping_step << std::endl;
-            for (const auto &p: polygon.fly_zone_polygon_points) {
-                std::cout << std::setprecision(15) << p.first << ", " << p.second << std::endl;
-            }
-
-
             for (int i = 0; i < 2; i++) {
                 auto sweeping_path = sweeping(polygon, angle, sweeping_step, static_cast<bool>(i));
                 double path_energy = energy_calculator.calculate_path_energy_consumption(sweeping_path);
-                if (sweeping_path.empty()) {
-//                    std::cout << "Sweeping path empty";
-                    continue;
+
+                if (!(path_energy + 0 > 0)) {
+                    std::cout << "NEN" << std::endl;
+                    std::cout << angle << " " << index << " " << sweeping_path.size() << std::endl;
                 }
+
                 targets.push_back(Target{static_cast<bool>(i),
                                          angle,
                                          path_energy,

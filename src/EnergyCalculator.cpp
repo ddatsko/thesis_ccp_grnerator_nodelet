@@ -1,6 +1,7 @@
 #include <EnergyCalculator.h>
 #include <cmath> 
 #include <algorithm>
+#include <iostream>
 
 namespace {
     const double AIR_DENSITY = 1.225; // [kg/m^3]
@@ -14,6 +15,10 @@ double EnergyCalculator::angle_between_points(std::pair<double, double> p0, std:
   double a = std::pow(p1.first - p0.first, 2) + std::pow(p1.second - p0.second, 2);
   double b = std::pow(p1.first - p2.first, 2) + std::pow(p1.second - p2.second, 2);
   double c = std::pow(p0.first - p2.first, 2) + std::pow(p0.second - p2.second, 2);
+
+  if (((a + b - c) / std::sqrt(4 * a * b) < -1) || ((a + b - c) / std::sqrt(4 * a * b) > 1)) {
+      return 0;
+  }
 
   return std::acos((a + b - c) / std::sqrt(4 * a * b));
 }
@@ -79,7 +84,7 @@ double EnergyCalculator::calculate_path_energy_consumption(const std::vector<std
   double v_x = 0, angle;
 
   // TODO: check if everything is right in this formula
-  for (size_t i = 1; i < path.size() - 1; i++) {
+  for (size_t i = 1; i + 1 < path.size(); i++) {
     angle = angle_between_points(path[i - 1], path[i], path[i + 1]);
     double new_vx = v_r * std::cos(M_PI - angle);
     total_energy += calculate_straight_line_energy(v_x, std::max(0.0, new_vx), path[i - 1], path[i]);

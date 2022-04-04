@@ -10,6 +10,7 @@
 #include <vector>
 #include "MapPolygon.hpp"
 #include "Target.h"
+#include "ShortestPathCalculator.hpp"
 
 struct metaheuristic_application_error: public std::runtime_error {
     using runtime_error::runtime_error;
@@ -24,6 +25,7 @@ namespace mstsp_solver {
         std::vector<TargetSet> m_target_sets;
         const SolverConfig m_config;
         const EnergyCalculator m_energy_calculator;
+        ShortestPathCalculator m_shortest_path_calculator;
 
         solution_t greedy_random() const;
 
@@ -65,7 +67,8 @@ namespace mstsp_solver {
     public:
         MstspSolver(SolverConfig config,
                     const std::vector<MapPolygon> &decomposed_polygons,
-                    const EnergyCalculator &energy_calculator);
+                    const EnergyCalculator &energy_calculator,
+                    const ShortestPathCalculator &shortest_path_calculator);
 
         std::vector<std::vector<point_t>> solve() const;
     };

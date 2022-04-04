@@ -11,6 +11,10 @@ struct polygon_decomposition_error: public std::runtime_error {
     using runtime_error::runtime_error;
 };
 
+enum decomposition_type_t {TRAPEZOIDAL_DECOMPOSITION,
+                           BOUSTROPHEDON_DECOMPOSITION,
+                           BOUSTROPHEDON_WITH_CONVEX_POLYGONS};
+
 /*!
  * Calculate the sweeping path to cover the graph g
  * NOTE: If the area to cover is not a convex polygon, the algorithm will produce not a full coverage path
@@ -30,7 +34,7 @@ vpdd sweeping(const MapPolygon &polygon, double angle, double sweeping_step, boo
  * union(result) = original_polygon
  * intersection(result) = {}
  */
-std::vector<MapPolygon> trapezoidal_decomposition(const MapPolygon &polygon,  bool merge_to_boustrophedon=false);
+std::vector<MapPolygon> trapezoidal_decomposition(const MapPolygon &polygon,  decomposition_type_t decomposition_type=BOUSTROPHEDON_DECOMPOSITION);
 
 
 #endif //MAP_TO_GRAPH_ALGORITHMS_HPP

@@ -77,34 +77,34 @@ namespace trajectory_generatiion {
             ros::shutdown();
             return;
         }
-        std::cout << "Points: " << std::endl;
-        for (auto &p: polygon.fly_zone_polygon_points) {
-            std::cout << p.first << " " << p.second << std::endl;
-        }
+//        std::cout << "Points: " << std::endl;
+//        for (auto &p: polygon.fly_zone_polygon_points) {
+//            std::cout << p.first << " " << p.second << std::endl;
+//        }
 
         ShortestPathCalculator shortest_path_calculator{polygon};
         point_t p1 = {1, 0.6};
         point_t p2 = {6.5, 5.5};
         auto path = shortest_path_calculator.get_approximate_shortest_path(p1, p2);
-        std::cout << "PATH: " << std::endl;
-        for (const auto &p: path) {
-            std::cout << p.first << ", " << p.second << std::endl;
-        }
+//        std::cout << "PATH: " << std::endl;
+//        for (const auto &p: path) {
+//            std::cout << p.first << ", " << p.second << std::endl;
+//        }
 
         auto g = Graph(polygon, 0, 30);
-        for (size_t i = 0; i < g.get_height(); ++i) {
-            for (size_t j = 0; j < g.get_width(); ++j) {
-                std::cout << (g(i, j) ? '1' : '0') << " ";
-            }
-            std::cout << std::endl;
-        }
+//        for (size_t i = 0; i < g.get_height(); ++i) {
+//            for (size_t j = 0; j < g.get_width(); ++j) {
+//                std::cout << (g(i, j) ? '1' : '0') << " ";
+//            }
+//            std::cout << std::endl;
+//        }
 
 
 //        std::cout << "Intersect: " <<  segments_intersect({{0, 0}, {5.16, 3.17}}, {{1, 3.5}, {1, 5}}) << std::endl;
 
         std::vector<MapPolygon> polygons_decomposed;
         try {
-            polygons_decomposed = trapezoidal_decomposition(polygon, true);
+            polygons_decomposed = trapezoidal_decomposition(polygon, BOUSTROPHEDON_WITH_CONVEX_POLYGONS);
         } catch (const polygon_decomposition_error &e) {
             std::cout << e.what() << std::endl;
         }
@@ -130,8 +130,8 @@ namespace trajectory_generatiion {
 
         EnergyCalculator energy_calculator(m_energy_config);
         point_t starting_point = gps_coordinates_to_meters({m_simulation_start_long, m_simulation_start_lat});
-        mstsp_solver::SolverConfig solver_config {{0}, 5, starting_point, 3};
-        mstsp_solver::MstspSolver solver(solver_config, polygons_decomposed, energy_calculator);
+        mstsp_solver::SolverConfig solver_config {{0, M_PI_2}, 5, starting_point, 3};
+        mstsp_solver::MstspSolver solver(solver_config, polygons_decomposed, energy_calculator, shortest_path_calculator);
 
         auto uav_paths = solver.solve();
 

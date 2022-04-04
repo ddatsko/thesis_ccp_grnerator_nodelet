@@ -104,7 +104,7 @@ void MapPolygon::load_polygon_from_file(const std::string &filename) {
             if (placemark_polygon_points.empty()) {
                 throw kml_file_parse_error("Could not load no fly zone polygon...");
             }
-            std::cout << "Non fly zone" << std::endl;
+//            std::cout << "Non fly zone" << std::endl;
             no_fly_zone_polygons.push_back(placemark_polygon_points);
         }
 

@@ -45,12 +45,14 @@ point_t meters_to_gps_coordinates(point_t p);
 
 int generate_random_number();
 
+bool polygon_convex(std::vector<point_t> polygon);
+
 /*!
  * Check if two numbers are close enough
  * @param n1 Number 1
  * @param n2 Number 2
  * @param eps Possible error
- * @return true if the distance between n1 and n2 is less than eps
+ * @return true if the distance between n1 and n2 is less than EPS
  */
 template<typename T>
 bool isclose(T n1, T n2, T eps=1e-10) {

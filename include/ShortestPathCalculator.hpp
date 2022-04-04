@@ -19,23 +19,34 @@ struct shortest_path_calculation_error: public std::runtime_error {
 class ShortestPathCalculator {
 private:
     std::vector<segment_t> m_polygon_segments;
-    std::map<point_t, int> m_point_index;
+    mutable std::map<point_t, int> m_point_index;
     std::vector<point_t> m_polygon_points;
     std::vector<std::vector<double>> m_floyd_warshall_d;
     std::vector<std::vector<size_t>> m_next_vertex_in_path;
 
     void run_floyd_warshall();
 
-    std::vector<int> polygon_nodes_seen_from_point(point_t point);
+    std::vector<int> polygon_nodes_seen_from_point(point_t point) const;
 
-    std::vector<point_t> shortest_path_between_polygon_nodes(size_t i, size_t j);
+    std::vector<point_t> shortest_path_between_polygon_nodes(size_t i, size_t j) const;
+
+    /*!
+     * Find the farthest point in path, seen from the source point
+     * @param source_point Source point, from which "beams" will be shot
+     * @param path Path consisting of points inside or on the edge of the polygon
+     * @return Index of the last point seen in the path
+     */
+    size_t farthest_point_seen_in_path(point_t source_point, const std::vector<point_t> &path) const;
+
+    bool point_can_see_point(point_t p1, point_t p2) const;
+
 
     /*!
      *  Find the closest point in polygon to yhe given point
      * @param p point to which the closest point will be found
      * @return The closest point to p
      */
-    point_t closest_polygon_point(point_t p);
+    point_t closest_polygon_point(point_t p) const;
 
 public:
     /*!
@@ -54,9 +65,9 @@ public:
      * @param p2 Point to find path to
      * @return Path between teo points, where path[0] = p1, path[-1] = p2
      */
-    std::vector<point_t> get_approximate_shortest_path(point_t p1, point_t p2);
+    std::vector<point_t> get_approximate_shortest_path(point_t p1, point_t p2) const;
 
-    std::vector<point_t> shortest_path_between_points(point_t p1, point_t p2);
+    std::vector<point_t> shortest_path_between_points(point_t p1, point_t p2) const;
 
 };
 

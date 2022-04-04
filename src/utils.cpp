@@ -85,11 +85,9 @@ double distance_between_points(point_t p1, point_t p2) {
 
 // TODO: test this
 point_t gps_coordinates_to_meters(point_t p) {
-    std::cout << "P: " << p.first << " " << p.second << "RES: ";
     point_t res;
     res.second = p.second * METERS_IN_DEGREE;
     res.first = std::cos((p.second / 180.0) * M_PI) * p.first * METERS_IN_DEGREE;
-    std::cout << res.first << " " << res.second << std::endl;
     return res;
 }
 
@@ -106,4 +104,19 @@ int generate_random_number() {
     static std::uniform_int_distribution<int> distribution(0, std::numeric_limits<int>::max());
 
     return distribution(generator);
+}
+
+bool polygon_convex(std::vector<point_t> polygon) {
+    // Push a new node to use only one loop further
+    polygon.push_back(polygon[1]);
+    int neg_angles = 0, pos_angles = 0;
+    for (size_t i = 0; i + 2 < polygon.size(); ++i) {
+        double angle = M_PI - angle_between_vectors(polygon[i], polygon[i + 1], polygon[i + 2]);
+        if (angle < 0 - 1e-5) {
+            ++neg_angles;
+        } else if (angle > 1e-5) {
+            ++pos_angles;
+        }
+    }
+    return neg_angles == 0 || pos_angles == 0;
 }

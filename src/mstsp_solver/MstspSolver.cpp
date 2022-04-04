@@ -14,8 +14,12 @@
 namespace mstsp_solver {
 
     MstspSolver::MstspSolver(SolverConfig config, const std::vector<MapPolygon> &decomposed_polygons,
-                             const EnergyCalculator &energy_calculator) : m_config(std::move(config)),
-                                                                          m_energy_calculator(energy_calculator) {
+                             const EnergyCalculator &energy_calculator,
+                             const ShortestPathCalculator &shortest_path_calculator) : m_config(std::move(config)),
+                                                                                       m_energy_calculator(
+                                                                                               energy_calculator),
+                                                                                       m_shortest_path_calculator(
+                                                                                               shortest_path_calculator) {
 
         std::cout << "Decomposed polygons: " << decomposed_polygons.size() << std::endl;
         std::cout << "Rotation angles num: " << m_config.rotation_angles.size() << std::endl;
@@ -56,7 +60,8 @@ namespace mstsp_solver {
                     }
                 }
             }
-            std::sort(possible_insertions.begin(), possible_insertions.end(), [](const Insertion &i1, const Insertion &i2){return i1.solution_cost < i2.solution_cost;});
+            std::sort(possible_insertions.begin(), possible_insertions.end(),
+                      [](const Insertion &i1, const Insertion &i2) { return i1.solution_cost < i2.solution_cost; });
 //            target_sets.erase(target_sets.begin());
 //            std::cout << "Possible insertions number" << possible_insertions.size() << std::endl;
             size_t size_reduced = possible_insertions.size() / 4;
@@ -84,10 +89,14 @@ namespace mstsp_solver {
             return 0;
         }
         double energy = 0;
+
+        // TODO: think if really the shortest path calculation is needed. It works at least in O(N) time and extremely slows the computation.
         for (size_t i = 0; i + 1 < path.size(); ++i) {
             energy += path[i].energy_consumption;
             energy += m_energy_calculator.calculate_straight_line_energy(0, 0, path[i].end_point,
                                                                          path[i + 1].starting_point);
+//            auto path_between_polygons = m_shortest_path_calculator.shortest_path_between_points(path[i].end_point, path[i + 1].starting_point);
+//            energy += m_energy_calculator.calculate_path_energy_consumption(path_between_polygons);
         }
         energy += path[path.size() - 1].energy_consumption;
         energy += m_energy_calculator.calculate_straight_line_energy(0, 0, m_config.starting_point, path[0].starting_point);
@@ -95,7 +104,6 @@ namespace mstsp_solver {
 
         return energy;
     }
-
 
 
     std::vector<std::vector<point_t>> MstspSolver::get_drones_paths(const solution_t &solution) const {
@@ -110,12 +118,20 @@ namespace mstsp_solver {
         std::vector<point_t> res;
         res.push_back(m_config.starting_point);
         for (const auto &target: targets) {
+            // Calculate the path from previous target to this one using the shortest path calculator
+            auto path_to_target = m_shortest_path_calculator.shortest_path_between_points(res.back(), target.starting_point);
+            path_to_target.pop_back();
+            path_to_target.erase(path_to_target.begin());
+            res.insert(res.end(), path_to_target.begin(), path_to_target.end());
+
             auto path = sweeping(m_target_sets[target.target_set_index].polygon, target.rotation_angle,
                                  m_config.sweeping_step, target.first_line_up);
             res.insert(res.end(), path.begin(), path.end());
         }
+        auto path_to_start = m_shortest_path_calculator.shortest_path_between_points(res.back(), m_config.starting_point);
+        path_to_start.erase(path_to_start.begin());
 
-        res.push_back(m_config.starting_point);
+        res.insert(res.end(), path_to_start.begin(), path_to_start.end());
         return res;
     }
 
@@ -145,14 +161,14 @@ namespace mstsp_solver {
         solution_t final_solution = init_solution;
 
         while (!stop_criteria) {
-            ++iteration;
-            std::cout << "==================================================\n";
-            std::cout << "Iteration: " << iteration << std::endl;
-            std::cout << "Iteration with no improvement: " << no_improvement_iteration << std::endl;
-            std::cout << "Best solution cost: " << best_solution_cost << std::endl;
-            if (iteration >= 500) {
-                break;
+            if (iteration % 50 == 0) {
+                std::cout << "==================================================\n";
+                std::cout << "Iteration: " << iteration << std::endl;
+                std::cout << "Iteration with no improvement: " << no_improvement_iteration << std::endl;
+                std::cout << "Best solution cost: " << best_solution_cost << std::endl;
             }
+            ++iteration;
+
 
             best_neighbourhood_cost = std::numeric_limits<double>::max();
 
@@ -185,7 +201,7 @@ namespace mstsp_solver {
                 }
             }
 
-            std::cout << "Best neighbourhood cost: " << best_neighbourhood_cost << std::endl;
+//            std::cout << "Best neighbourhood cost: " << best_neighbourhood_cost << std::endl;
             if (best_neighbourhood_cost < std::numeric_limits<double>::max()) {
                 if (tabu_list.size() >= nodes / 4) {
                     tabu_list.pop_front();
@@ -221,7 +237,7 @@ namespace mstsp_solver {
             }
             // TODO: check if the commented line ie needed
             //g1_score += m_config.p1;
-            if (no_improvement_iteration >= 200) {
+            if (no_improvement_iteration >= 500) {
                 stop_criteria = true;
             }
         }
@@ -231,11 +247,23 @@ namespace mstsp_solver {
     double MstspSolver::get_solution_cost(const solution_t &solution) const {
         //TODO: tune this function. We should somehow take into account both average and max energy spent by a drone
         // For now, calculate only the sum of energies spent
-        double cost = 0;
+        double cost_sum = 0;
+        double max_path_cost = 0;
+
         for (const auto &uav_path: solution) {
-            cost += get_path_cost(uav_path);
+            double path_cost = get_path_cost(uav_path);
+            cost_sum += path_cost;
+            max_path_cost = std::max(max_path_cost, path_cost);
         }
-        return cost;
+
+        double mean = cost_sum / static_cast<double>(solution.size());
+        double variance = 0;
+        for (const auto &uav_path: solution) {
+            double path_cost = get_path_cost(uav_path);
+            variance += std::pow(path_cost - mean, 2);
+        }
+
+        return max_path_cost;
     }
 
     // Random shift intra-inter route
@@ -320,7 +348,8 @@ namespace mstsp_solver {
                     continue;
                 }
                 solution_t intermediate_solution = solution;
-                intermediate_solution[i].insert(intermediate_solution[i].begin() + static_cast<long>(j), target_to_move);
+                intermediate_solution[i].insert(intermediate_solution[i].begin() + static_cast<long>(j),
+                                                target_to_move);
                 for (size_t k = 0; k < target_set_to_check.targets.size(); ++k) {
                     intermediate_solution[i][j] = target_set_to_check.targets[k];
                     // TODO: in Franta's code there is something strange here
@@ -362,26 +391,26 @@ namespace mstsp_solver {
 
         double best_solution_cost = std::numeric_limits<double>::max();
 
-//        for (size_t i = 0; i < routes; i++) {
-//            for (size_t j = 0; j < solution[i].size(); ++j) {
-//                if (i == index_a1 && j == index_c1) {
-//                    continue;
-//                }
-//                auto old_a1_c1 = solution[index_a1][index_c1];
-//                auto old_i_j = solution[i][j];
-//
-//                std::swap(solution[index_a1][index_c1], solution[i][j]);
-//                find_best_targets_for_position(solution, index_a1, index_c1, i, j);
-//                double solution_cost = get_solution_cost(solution);
-//                if (solution_cost < best_solution_cost) {
-//                    best_solution_cost = solution_cost;
-//                    index_a2 = i;
-//                    index_c2 = j;
-//                }
-//                solution[index_a1][index_c1] = old_a1_c1;
-//                solution[i][j] = old_i_j;
-//            }
-//        }
+        for (size_t i = 0; i < routes; i++) {
+            for (size_t j = 0; j < solution[i].size(); ++j) {
+                if (i == index_a1 && j == index_c1) {
+                    continue;
+                }
+                auto old_a1_c1 = solution[index_a1][index_c1];
+                auto old_i_j = solution[i][j];
+
+                std::swap(solution[index_a1][index_c1], solution[i][j]);
+                find_best_targets_for_position(solution, index_a1, index_c1, i, j);
+                double solution_cost = get_solution_cost(solution);
+                if (solution_cost < best_solution_cost) {
+                    best_solution_cost = solution_cost;
+                    index_a2 = i;
+                    index_c2 = j;
+                }
+                solution[index_a1][index_c1] = old_a1_c1;
+                solution[i][j] = old_i_j;
+            }
+        }
         if (index_a1 != index_a2 || index_c1 != index_c2) {
             std::swap(solution[index_a1][index_c1], solution[index_a2][index_c2]);
             find_best_targets_for_position(solution, index_a1, index_c1, index_a2, index_c2);
@@ -422,8 +451,10 @@ namespace mstsp_solver {
     }
 
     void MstspSolver::find_best_targets_for_position(solution_t &solution, size_t uav1, size_t path_index_1,
-                                          size_t uav2, size_t path_index_2) const {
+                                                     size_t uav2, size_t path_index_2) const {
         double best_cost = std::numeric_limits<double>::max();
+
+
         // This should definitely change, but to avoid undefined behavior, initialize with 0
         size_t target_1_index = 0, target_2_index = 0;
         const auto &targets_1 = m_target_sets[solution[uav1][path_index_1].target_set_index].targets;
@@ -431,9 +462,9 @@ namespace mstsp_solver {
 
         for (size_t i = 0; i < targets_1.size(); ++i) {
             for (size_t j = 0; j < targets_2.size(); ++j) {
-                solution[uav1][target_1_index] = targets_1[i];
-                solution[uav2][target_2_index] = targets_2[j];
-                double path_cost = get_path_cost(solution[uav1]) + get_path_cost(solution[uav2]);
+                solution[uav1][path_index_1] = targets_1[i];
+                solution[uav2][path_index_2] = targets_2[j];
+                double path_cost = get_solution_cost(solution);
                 if (path_cost < best_cost) {
                     best_cost = path_cost;
                     target_1_index = i;
