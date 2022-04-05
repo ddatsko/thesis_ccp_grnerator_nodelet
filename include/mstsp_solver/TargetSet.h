@@ -19,6 +19,7 @@ namespace mstsp_solver {
         MapPolygon polygon;
         std::vector<Target> targets;
         EnergyCalculator energy_calculator;
+        double sweeping_step;
 
         TargetSet(size_t index, const MapPolygon &polygon, double sweeping_step,
                   const EnergyCalculator &energy_calculator) :
@@ -27,8 +28,11 @@ namespace mstsp_solver {
         TargetSet(size_t index, const MapPolygon &polygon, double sweeping_step,
                   const EnergyCalculator &energy_calculator, const std::vector<double> &rotation_angles);
 
-//    TargetSet(TargetSet &&rhs) = default;
-//    TargetSet& operator=(const TargetSet &rhs) = default;
+        TargetSet(size_t index, const MapPolygon &polygon, double sweeping_step,
+                  const EnergyCalculator &energy_calculator, size_t number_of_edges_rotations);
+
+    private:
+        void add_rotation_angles(const std::vector<double>& angles);
     };
 }
 

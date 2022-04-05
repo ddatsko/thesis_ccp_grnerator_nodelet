@@ -120,3 +120,20 @@ bool polygon_convex(std::vector<point_t> polygon) {
     }
     return neg_angles == 0 || pos_angles == 0;
 }
+
+double get_segment_rotation(segment_t segment) {
+    // TODO: check this formula
+    segment.second.first -= segment.first.first;
+    segment.second.second -= segment.first.second;
+    segment.first = {0, 0};
+
+    double length = segment_length(segment);
+    segment.second.first /= length;
+    segment.second.second /= length;
+
+    if (segment.second.first == 0) {
+        return M_PI_2;
+    }
+
+    return std::atan(segment.second.second) / segment.second.first;
+}

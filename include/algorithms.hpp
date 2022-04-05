@@ -36,5 +36,15 @@ vpdd sweeping(const MapPolygon &polygon, double angle, double sweeping_step, boo
  */
 std::vector<MapPolygon> trapezoidal_decomposition(const MapPolygon &polygon,  decomposition_type_t decomposition_type=BOUSTROPHEDON_DECOMPOSITION);
 
+/*!
+ * Create a map polygon from 2 segments and a vertical line on the right
+ * @note Each vertical line must go through each fo 2 segments. Otherwise the result is unfeasible
+ * @param s1 Segment 1
+ * @param s2 Segment 2
+ * @param x x coordinate of vertical line
+ * @return MapPolygon created
+ */
+MapPolygon polygon_from_2_segments(segment_t s1, segment_t s2, double x);
+
 
 #endif //MAP_TO_GRAPH_ALGORITHMS_HPP

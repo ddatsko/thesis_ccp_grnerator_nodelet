@@ -11,53 +11,6 @@ namespace {
     }
 
     /*!
-     * Create a map polygon from 2 segments and a vertical line on the right
-     * @note Each vertical line must go through each fo 2 segments. Otherwise the result is unfeasible
-     * @param s1 Segment 1
-     * @param s2 Segment 2
-     * @param x x coordinate of vertical line
-     * @return MapPolygon created
-     */
-    MapPolygon polygon_from_2_segments(segment_t s1, segment_t s2, double x) {
-        MapPolygon polygon;
-        if (s1.first.second > s2.first.second || s1.second.second > s2.second.second) {
-            std::swap(s1, s2);
-        }
-        // Triangle with one point in the left
-        if (s1.first == s2.first) {
-            polygon.fly_zone_polygon_points.insert(polygon.fly_zone_polygon_points.end(),
-                                                   {
-                                                           s1.first,
-                                                           {x, vertical_line_segment_intersection(s2, x)},
-                                                           {x, vertical_line_segment_intersection(s1, x)},
-                                                           s1.first
-                                                   });
-            return polygon;
-        }
-
-        // Triangle with one point which is the same as the point of segments intersection at the right
-        if (s2.second.first == x && s2.second == s1.second) {
-            polygon.fly_zone_polygon_points.insert(polygon.fly_zone_polygon_points.end(),
-                                                   {
-                                                           s1.first,
-                                                           s2.first,
-                                                           s1.second,
-                                                           s1.first
-                                                   });
-            return polygon;
-        }
-
-        polygon.fly_zone_polygon_points.insert(polygon.fly_zone_polygon_points.end(), {
-                s1.first,
-                s2.first,
-                {x, vertical_line_segment_intersection(s2, x)},
-                {x, vertical_line_segment_intersection(s1, x)},
-                s1.first
-        });
-        return polygon;
-    }
-
-    /*!
      * Add new polygon detected by trapezoidal decomposition to the existing set of polygons
      * Merges the polygon with an existing one if new polygon's left edge is
      * one of the edges of the existing one and merge_to_boustrophedon is set to true
@@ -119,6 +72,46 @@ namespace {
         }
 
     }
+}
+
+
+MapPolygon polygon_from_2_segments(segment_t s1, segment_t s2, double x) {
+    MapPolygon polygon;
+    if (s1.first.second > s2.first.second || s1.second.second > s2.second.second) {
+        std::swap(s1, s2);
+    }
+    // Triangle with one point in the left
+    if (s1.first == s2.first) {
+        polygon.fly_zone_polygon_points.insert(polygon.fly_zone_polygon_points.end(),
+                                               {
+                                                       s1.first,
+                                                       {x, vertical_line_segment_intersection(s2, x)},
+                                                       {x, vertical_line_segment_intersection(s1, x)},
+                                                       s1.first
+                                               });
+        return polygon;
+    }
+
+    // Triangle with one point which is the same as the point of segments intersection at the right
+    if (s2.second.first == x && s2.second == s1.second) {
+        polygon.fly_zone_polygon_points.insert(polygon.fly_zone_polygon_points.end(),
+                                               {
+                                                       s1.first,
+                                                       s2.first,
+                                                       s1.second,
+                                                       s1.first
+                                               });
+        return polygon;
+    }
+
+    polygon.fly_zone_polygon_points.insert(polygon.fly_zone_polygon_points.end(), {
+            s1.first,
+            s2.first,
+            {x, vertical_line_segment_intersection(s2, x)},
+            {x, vertical_line_segment_intersection(s1, x)},
+            s1.first
+    });
+    return polygon;
 }
 
 

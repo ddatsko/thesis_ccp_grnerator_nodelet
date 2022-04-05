@@ -21,12 +21,56 @@ namespace mstsp_solver {
                                                                                        m_shortest_path_calculator(
                                                                                                shortest_path_calculator) {
 
-        std::cout << "Decomposed polygons: " << decomposed_polygons.size() << std::endl;
-        std::cout << "Rotation angles num: " << m_config.rotation_angles.size() << std::endl;
+//        std::cout << "Decomposed polygons: " << decomposed_polygons.size() << std::endl;
+//        std::cout << "Rotation angles num: " << m_config.rotation_angles.size() << std::endl;
         for (size_t i = 0; i < decomposed_polygons.size(); ++i) {
             m_target_sets.emplace_back(i, decomposed_polygons[i], m_config.sweeping_step, m_energy_calculator,
-                                       m_config.rotation_angles);
+                                       m_config.rotation_angles.size());
         }
+    }
+
+    double MstspSolver::get_path_cost(const std::vector<Target> &path) const {
+        if (path.empty()) {
+            return 0;
+        }
+        double energy = 0;
+
+        // TODO: think if really the shortest path calculation is needed. It works at least in O(N) time and extremely slows the computation.
+        for (size_t i = 0; i + 1 < path.size(); ++i) {
+            energy += path[i].energy_consumption;
+            energy += m_energy_calculator.calculate_straight_line_energy(0, 0, path[i].end_point,
+                                                                         path[i + 1].starting_point);
+//            auto path_between_polygons = m_shortest_path_calculator.shortest_path_between_points(path[i].end_point, path[i + 1].starting_point);
+//            energy += m_energy_calculator.calculate_path_energy_consumption(path_between_polygons);
+        }
+        energy += path[path.size() - 1].energy_consumption;
+        energy += m_energy_calculator.calculate_straight_line_energy(0, 0, m_config.starting_point, path[0].starting_point);
+        energy += m_energy_calculator.calculate_straight_line_energy(0, 0, path[path.size() - 1].end_point, m_config.starting_point);
+
+        return energy;
+    }
+
+
+    double MstspSolver::get_solution_cost(const solution_t &solution) const {
+        //TODO: tune this function. We should somehow take into account both average and max energy spent by a drone
+        // For now, calculate only the sum of energies spent
+        double cost_sum = 0;
+        double max_path_cost = 0;
+
+        for (const auto &uav_path: solution) {
+            double path_cost = get_path_cost(uav_path);
+            cost_sum += path_cost;
+            max_path_cost = std::max(max_path_cost, path_cost);
+        }
+
+        double mean = cost_sum / static_cast<double>(solution.size());
+        double variance = 0;
+        for (const auto &uav_path: solution) {
+            double path_cost = get_path_cost(uav_path);
+            variance += std::pow(path_cost - mean, 2);
+        }
+
+        return cost_sum;
     }
 
 
@@ -83,27 +127,6 @@ namespace mstsp_solver {
         return current_solution;
     }
 
-
-    double MstspSolver::get_path_cost(const std::vector<Target> &path) const {
-        if (path.empty()) {
-            return 0;
-        }
-        double energy = 0;
-
-        // TODO: think if really the shortest path calculation is needed. It works at least in O(N) time and extremely slows the computation.
-        for (size_t i = 0; i + 1 < path.size(); ++i) {
-            energy += path[i].energy_consumption;
-            energy += m_energy_calculator.calculate_straight_line_energy(0, 0, path[i].end_point,
-                                                                         path[i + 1].starting_point);
-//            auto path_between_polygons = m_shortest_path_calculator.shortest_path_between_points(path[i].end_point, path[i + 1].starting_point);
-//            energy += m_energy_calculator.calculate_path_energy_consumption(path_between_polygons);
-        }
-        energy += path[path.size() - 1].energy_consumption;
-        energy += m_energy_calculator.calculate_straight_line_energy(0, 0, m_config.starting_point, path[0].starting_point);
-        energy += m_energy_calculator.calculate_straight_line_energy(0, 0, path[path.size() - 1].end_point, m_config.starting_point);
-
-        return energy;
-    }
 
 
     std::vector<std::vector<point_t>> MstspSolver::get_drones_paths(const solution_t &solution) const {
@@ -168,8 +191,6 @@ namespace mstsp_solver {
                 std::cout << "Best solution cost: " << best_solution_cost << std::endl;
             }
             ++iteration;
-
-
             best_neighbourhood_cost = std::numeric_limits<double>::max();
 
             // Reset scores after R_T iterations
@@ -244,27 +265,6 @@ namespace mstsp_solver {
         return get_drones_paths(final_solution);
     }
 
-    double MstspSolver::get_solution_cost(const solution_t &solution) const {
-        //TODO: tune this function. We should somehow take into account both average and max energy spent by a drone
-        // For now, calculate only the sum of energies spent
-        double cost_sum = 0;
-        double max_path_cost = 0;
-
-        for (const auto &uav_path: solution) {
-            double path_cost = get_path_cost(uav_path);
-            cost_sum += path_cost;
-            max_path_cost = std::max(max_path_cost, path_cost);
-        }
-
-        double mean = cost_sum / static_cast<double>(solution.size());
-        double variance = 0;
-        for (const auto &uav_path: solution) {
-            double path_cost = get_path_cost(uav_path);
-            variance += std::pow(path_cost - mean, 2);
-        }
-
-        return max_path_cost;
-    }
 
     // Random shift intra-inter route
     void MstspSolver::get_g1_solution(solution_t &solution) const {

@@ -48,6 +48,13 @@ int generate_random_number();
 bool polygon_convex(std::vector<point_t> polygon);
 
 /*!
+ * Get the rotation of the segment (as vector starting at first point) according to the Ox axis
+ * @param segment Segment, rotation for which will be found
+ * @return Angle of the rotation in radians
+ */
+double get_segment_rotation(segment_t segment);
+
+/*!
  * Check if two numbers are close enough
  * @param n1 Number 1
  * @param n2 Number 2

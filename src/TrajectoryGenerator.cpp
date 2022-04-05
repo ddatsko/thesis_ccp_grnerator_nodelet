@@ -116,6 +116,14 @@ namespace trajectory_generatiion {
             }
             of.close();
         }
+
+        std::vector<MapPolygon> polygons_divided;
+        for (const auto &p: polygons_decomposed) {
+            auto divided = p.split_into_pieces(100);
+            polygons_divided.insert(polygons_divided.end(), divided.begin(), divided.end());
+        }
+        polygons_decomposed = polygons_divided;
+
         int counter = 0;
         for (auto &pol: polygons_decomposed) {
             std::stringstream filename;
@@ -128,22 +136,22 @@ namespace trajectory_generatiion {
         }
         std::cout << "Decomposed..." << std::endl;
 
-        EnergyCalculator energy_calculator(m_energy_config);
-        point_t starting_point = gps_coordinates_to_meters({m_simulation_start_long, m_simulation_start_lat});
-        mstsp_solver::SolverConfig solver_config {{0, M_PI_2}, 5, starting_point, 3};
-        mstsp_solver::MstspSolver solver(solver_config, polygons_decomposed, energy_calculator, shortest_path_calculator);
+//        EnergyCalculator energy_calculator(m_energy_config);
+//        point_t starting_point = gps_coordinates_to_meters({m_simulation_start_long, m_simulation_start_lat});
+//        mstsp_solver::SolverConfig solver_config {{0, M_PI_2, M_PI, 0}, 5, starting_point, 3};
+//        mstsp_solver::MstspSolver solver(solver_config, polygons_decomposed, energy_calculator, shortest_path_calculator);
+//
+//        auto uav_paths = solver.solve();
 
-        auto uav_paths = solver.solve();
-
-
-        for (size_t i = 0; i < uav_paths.size(); ++i) {
-            std::stringstream filename_ss;
-            filename_ss << "/home/mrs/polygons/uav" << i << ".csv";
-            std::ofstream of(filename_ss.str());
-            for (const auto &p: uav_paths[i]) {
-                of << std::setprecision(10) << p.first << ", " << std::setprecision(10) << p.second << std::endl;
-            }
-        }
+//
+//        for (size_t i = 0; i < uav_paths.size(); ++i) {
+//            std::stringstream filename_ss;
+//            filename_ss << "/home/mrs/polygons/uav" << i << ".csv";
+//            std::ofstream of(filename_ss.str());
+//            for (const auto &p: uav_paths[i]) {
+//                of << std::setprecision(10) << p.first << ", " << std::setprecision(10) << p.second << std::endl;
+//            }
+//        }
 
 
 

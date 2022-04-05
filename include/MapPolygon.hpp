@@ -70,6 +70,19 @@ struct MapPolygon {
      */
     [[nodiscard]] std::pair<point_t, point_t> rightmost_edge() const;
 
+    /*!
+     * Get n (or less if n >= number_of_edges) angles of rotation of n longest edges
+     * @param n Number of longest edges to encounter
+     * @return vector of min(n, number_of_edges) rotation angles
+     */
+    std::vector<double> get_n_longest_edges_rotation_angles(size_t n) const;
+
+    std::vector<MapPolygon> split_into_pieces(double max_piece_area) const;
+
+    void make_pure_convex();
+
+    double area() const;
+
 
     //TODO: implement reducing all the points and not only ones of the outer perimeter
 template<class Op>
@@ -80,6 +93,7 @@ template<class Op>
                                op);
         }
 };
+
 
 
 #endif //MAP_TO_GRAPH_MAPPOLYGON_HPP
