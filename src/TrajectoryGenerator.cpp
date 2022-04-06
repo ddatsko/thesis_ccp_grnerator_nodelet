@@ -1,5 +1,7 @@
 #include <TrajectoryGenerator.h>
 
+// TODO: make a separate executable from all this staff that does not use any ROS
+
 /* every nodelet must include macros which export the class as a nodelet plugin */
 #include <pluginlib/class_list_macros.h>
 #include <mrs_msgs/PathSrv.h>
@@ -83,24 +85,6 @@ namespace trajectory_generatiion {
 //        }
 
         ShortestPathCalculator shortest_path_calculator{polygon};
-        point_t p1 = {1, 0.6};
-        point_t p2 = {6.5, 5.5};
-        auto path = shortest_path_calculator.get_approximate_shortest_path(p1, p2);
-//        std::cout << "PATH: " << std::endl;
-//        for (const auto &p: path) {
-//            std::cout << p.first << ", " << p.second << std::endl;
-//        }
-
-        auto g = Graph(polygon, 0, 30);
-//        for (size_t i = 0; i < g.get_height(); ++i) {
-//            for (size_t j = 0; j < g.get_width(); ++j) {
-//                std::cout << (g(i, j) ? '1' : '0') << " ";
-//            }
-//            std::cout << std::endl;
-//        }
-
-
-//        std::cout << "Intersect: " <<  segments_intersect({{0, 0}, {5.16, 3.17}}, {{1, 3.5}, {1, 5}}) << std::endl;
 
         std::vector<MapPolygon> polygons_decomposed;
         try {
@@ -149,7 +133,8 @@ namespace trajectory_generatiion {
             filename_ss << "/home/mrs/polygons/uav" << i << ".csv";
             std::ofstream of(filename_ss.str());
             for (const auto &p: uav_paths[i]) {
-                of << std::setprecision(10) << p.first << ", " << std::setprecision(10) << p.second << std::endl;
+                auto point_gps = meters_to_gps_coordinates(p);
+                of << std::setprecision(10) << point_gps.first << ", " << std::setprecision(10) << point_gps.second << std::endl;
             }
         }
 

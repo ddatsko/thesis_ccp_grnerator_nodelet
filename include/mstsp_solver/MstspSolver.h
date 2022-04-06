@@ -16,6 +16,26 @@ struct metaheuristic_application_error: public std::runtime_error {
     using runtime_error::runtime_error;
 };
 
+struct solution_cost_t {
+    double max_path_cost;
+    double path_cost_sum;
+
+    solution_cost_t() = delete;
+
+    static solution_cost_t max() {
+        return {std::numeric_limits<double>::max(), std::numeric_limits<double>::max()};
+    }
+
+    static solution_cost_t min() {
+        return {std::numeric_limits<double>::min(), std::numeric_limits<double>::min()};
+    }
+
+    bool operator<(const solution_cost_t &rhs) const {
+        return (max_path_cost < rhs.max_path_cost ||
+        (max_path_cost == rhs.max_path_cost && path_cost_sum < rhs.path_cost_sum));
+    }
+};
+
 namespace mstsp_solver {
 
     using solution_t = std::vector<std::vector<Target>>;
@@ -35,7 +55,7 @@ namespace mstsp_solver {
          * @param solution Problem solution
          * @return Cost of the solution
          */
-        double get_solution_cost(const solution_t &solution) const;
+        solution_cost_t get_solution_cost(const solution_t &solution) const;
 
         /*!
          * Gwt paths for all the drones from the specified problem solution

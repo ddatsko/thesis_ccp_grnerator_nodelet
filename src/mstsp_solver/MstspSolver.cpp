@@ -51,7 +51,7 @@ namespace mstsp_solver {
     }
 
 
-    double MstspSolver::get_solution_cost(const solution_t &solution) const {
+    solution_cost_t MstspSolver::get_solution_cost(const solution_t &solution) const {
         //TODO: tune this function. We should somehow take into account both average and max energy spent by a drone
         // For now, calculate only the sum of energies spent
         double cost_sum = 0;
@@ -70,7 +70,7 @@ namespace mstsp_solver {
             variance += std::pow(path_cost - mean, 2);
         }
 
-        return max_path_cost;
+        return {max_path_cost, cost_sum};
     }
 
 
@@ -167,10 +167,10 @@ namespace mstsp_solver {
         }
 
         std::list<solution_t> tabu_list;
-        double best_solution_cost = get_solution_cost(init_solution);
+        solution_cost_t best_solution_cost = get_solution_cost(init_solution);
 
         int best_group = 0;
-        double best_neighbourhood_cost;
+        solution_cost_t best_neighbourhood_cost = solution_cost_t::max();
 
         solution_t best_neighbourhood_solution = init_solution;
         tabu_list.push_back(init_solution);
@@ -188,10 +188,10 @@ namespace mstsp_solver {
                 std::cout << "==================================================\n";
                 std::cout << "Iteration: " << iteration << std::endl;
                 std::cout << "Iteration with no improvement: " << no_improvement_iteration << std::endl;
-                std::cout << "Best solution cost: " << best_solution_cost << std::endl;
+                std::cout << "Best solution cost: " << best_solution_cost.max_path_cost << ", " << best_solution_cost.path_cost_sum << std::endl;
             }
             ++iteration;
-            best_neighbourhood_cost = std::numeric_limits<double>::max();
+            best_neighbourhood_cost = solution_cost_t::max();
 
             // Reset scores after R_T iterations
             if (++R_T_iterator >= m_config.R_T) {
@@ -213,7 +213,7 @@ namespace mstsp_solver {
                     get_g4_solution(tabu_solution);
                 }
 
-                double tabu_solution_cost = get_solution_cost(tabu_solution);
+                solution_cost_t tabu_solution_cost = get_solution_cost(tabu_solution);
                 if (tabu_solution_cost < best_neighbourhood_cost &&
                     std::find(tabu_list.begin(), tabu_list.end(), tabu_solution) == tabu_list.end()) {
                     best_neighbourhood_cost = tabu_solution_cost;
@@ -223,7 +223,7 @@ namespace mstsp_solver {
             }
 
 //            std::cout << "Best neighbourhood cost: " << best_neighbourhood_cost << std::endl;
-            if (best_neighbourhood_cost < std::numeric_limits<double>::max()) {
+            if (best_neighbourhood_cost < solution_cost_t::max()) {
                 if (tabu_list.size() >= nodes / 4) {
                     tabu_list.pop_front();
                 }
@@ -334,7 +334,7 @@ namespace mstsp_solver {
 
         size_t index_c1 = generate_random_number() % solution[index_a1].size();
 
-        double best_solution_cost = std::numeric_limits<double>::max();
+        solution_cost_t best_solution_cost = solution_cost_t::max();
         size_t target_in_target_set_index = 0;
 
         Target target_to_move = solution[index_a1][index_c1];
@@ -353,7 +353,7 @@ namespace mstsp_solver {
                 for (size_t k = 0; k < target_set_to_check.targets.size(); ++k) {
                     intermediate_solution[i][j] = target_set_to_check.targets[k];
                     // TODO: in Franta's code there is something strange here
-                    double path_cost = get_solution_cost(intermediate_solution);
+                    solution_cost_t path_cost = get_solution_cost(intermediate_solution);
                     if (path_cost < best_solution_cost) {
                         best_solution_cost = path_cost;
                         index_a1 = i;
@@ -389,7 +389,7 @@ namespace mstsp_solver {
         size_t index_c1 = generate_random_number() % solution[index_a1].size();
         size_t index_a2 = index_a1, index_c2 = index_c1;
 
-        double best_solution_cost = std::numeric_limits<double>::max();
+        auto best_solution_cost = solution_cost_t::max();
 
         for (size_t i = 0; i < routes; i++) {
             for (size_t j = 0; j < solution[i].size(); ++j) {
@@ -401,7 +401,7 @@ namespace mstsp_solver {
 
                 std::swap(solution[index_a1][index_c1], solution[i][j]);
                 find_best_targets_for_position(solution, index_a1, index_c1, i, j);
-                double solution_cost = get_solution_cost(solution);
+                solution_cost_t solution_cost = get_solution_cost(solution);
                 if (solution_cost < best_solution_cost) {
                     best_solution_cost = solution_cost;
                     index_a2 = i;
@@ -452,7 +452,7 @@ namespace mstsp_solver {
 
     void MstspSolver::find_best_targets_for_position(solution_t &solution, size_t uav1, size_t path_index_1,
                                                      size_t uav2, size_t path_index_2) const {
-        double best_cost = std::numeric_limits<double>::max();
+        solution_cost_t best_cost = solution_cost_t::max();
 
 
         // This should definitely change, but to avoid undefined behavior, initialize with 0
@@ -464,7 +464,7 @@ namespace mstsp_solver {
             for (size_t j = 0; j < targets_2.size(); ++j) {
                 solution[uav1][path_index_1] = targets_1[i];
                 solution[uav2][path_index_2] = targets_2[j];
-                double path_cost = get_solution_cost(solution);
+                solution_cost_t path_cost = get_solution_cost(solution);
                 if (path_cost < best_cost) {
                     best_cost = path_cost;
                     target_1_index = i;
