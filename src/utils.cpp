@@ -127,13 +127,14 @@ double get_segment_rotation(segment_t segment) {
     segment.second.second -= segment.first.second;
     segment.first = {0, 0};
 
-    double length = segment_length(segment);
-    segment.second.first /= length;
-    segment.second.second /= length;
 
     if (segment.second.first == 0) {
-        return M_PI_2;
+        return segment.second.second > 0 ? M_PI_2 : -M_PI_2;
     }
 
-    return std::atan(segment.second.second) / segment.second.first;
+    double angle = std::atan(segment.second.second / segment.second.first);
+    if (segment.second.first < 0) {
+        return angle + M_PI;
+    }
+    return angle;
 }

@@ -234,39 +234,47 @@ std::vector<double> MapPolygon::get_n_longest_edges_rotation_angles(size_t n) co
     return rotations;
 }
 
-std::vector<MapPolygon> MapPolygon::split_into_pieces(double max_piece_area) const {
+std::vector<MapPolygon> MapPolygon::split_into_pieces(double max_piece_area) {
     if (max_piece_area > area()) {
         return {*this};
     }
-
     size_t number_of_pieces = std::ceil(area() / max_piece_area);
-    double piece_area = area() / number_of_pieces;
 
-    // Rotate the polygon to make the longest edge vertical
-    // TODO: check if the rotation angle is appropriate and the longest edge is always at the left
-    double rotation_angle = get_n_longest_edges_rotation_angles(1)[0] - M_PI;
-    std::cout << "angle: " << rotation_angle << std::endl;
-
-    auto polygon_rotated = rotated(rotation_angle);
-    polygon_rotated.make_pure_convex();
-    make_polygon_clockwise(polygon_rotated.fly_zone_polygon_points);
-
-    std::cout << "Rotated polygon: " << polygon_rotated.area() << std::endl;
-    for (const auto &p: polygon_rotated.fly_zone_polygon_points) {
-        std::cout << "(" << std::setprecision(10) << p.first << ", " << std::setprecision(10) << p.second << ")" << std::endl;
-    }
+    make_pure_convex();
+    make_polygon_clockwise(fly_zone_polygon_points);
 
     // Find the index of the longest edge in the polygon and
     size_t longest_edge_i = 0;
     double longest_edge = std::numeric_limits<double>::min();
 
-    auto fly_zone = polygon_rotated.fly_zone_polygon_points;
-    for (size_t i = 0; i + 1 < fly_zone.size(); ++i) {
-        double edge_length = segment_length({fly_zone[i], fly_zone[i + 1]});
+    for (size_t i = 0; i + 1 < fly_zone_polygon_points.size(); ++i) {
+        double edge_length = segment_length({fly_zone_polygon_points[i], fly_zone_polygon_points[i + 1]});
+        std::cout << "Length: " << edge_length << std::endl;
         if (edge_length > longest_edge) {
             longest_edge = edge_length;
             longest_edge_i = i;
         }
+    }
+
+    // Rotate the polygon to make the longest edge vertical
+    // TODO: check if the rotation angle is appropriate and the longest edge is always at the left
+    double rotation_angle = get_segment_rotation({fly_zone_polygon_points[longest_edge_i], fly_zone_polygon_points[longest_edge_i + 1]});
+    std::cout << "angle: " << rotation_angle << std::endl;
+    rotation_angle = -(rotation_angle + 3 * M_PI_2);
+    std::cout << "rotation angle" << rotation_angle << std::endl;
+
+    std::cout << "Not rotated polygon: " << area() << std::endl;
+    for (const auto &p: fly_zone_polygon_points) {
+        std::cout << "(" << std::setprecision(10) << p.first << ", " << std::setprecision(10) << p.second << ")" << std::endl;
+    }
+
+    auto polygon_rotated = rotated(rotation_angle);
+    auto fly_zone = polygon_rotated.fly_zone_polygon_points;
+
+
+    std::cout << "Rotated polygon: " << polygon_rotated.area() << std::endl;
+    for (const auto &p: polygon_rotated.fly_zone_polygon_points) {
+        std::cout << "(" << std::setprecision(10) << p.first << ", " << std::setprecision(10) << p.second << ")" << std::endl;
     }
 
     // Assuming that polygon is rotated clockwise and the longest edge is on the left

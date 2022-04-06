@@ -35,11 +35,11 @@ namespace mstsp_solver {
         }
         double energy = 0;
 
-        // TODO: think if really the shortest path calculation is needed. It works at least in O(N) time and extremely slows the computation.
         for (size_t i = 0; i + 1 < path.size(); ++i) {
             energy += path[i].energy_consumption;
             energy += m_energy_calculator.calculate_straight_line_energy(0, 0, path[i].end_point,
                                                                          path[i + 1].starting_point);
+            // TODO: think if really the shortest path calculation is needed. It works at least in O(N) time and extremely slows the computation.
 //            auto path_between_polygons = m_shortest_path_calculator.shortest_path_between_points(path[i].end_point, path[i + 1].starting_point);
 //            energy += m_energy_calculator.calculate_path_energy_consumption(path_between_polygons);
         }
@@ -70,7 +70,7 @@ namespace mstsp_solver {
             variance += std::pow(path_cost - mean, 2);
         }
 
-        return cost_sum;
+        return max_path_cost;
     }
 
 

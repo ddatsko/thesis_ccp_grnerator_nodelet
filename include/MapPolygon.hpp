@@ -23,6 +23,21 @@ struct wrong_polygon_format_error: public std::runtime_error {
     using runtime_error::runtime_error;
 };
 
+struct solution_cost_t {
+    double max_path_cost;
+    double path_cost_sum;
+
+    solution_cost_t() = delete;
+
+    static solution_cost_t max() {
+        return {std::numeric_limits<double>::max(), std::numeric_limits<double>::max()};
+    }
+
+    static solution_cost_t min() {
+        return {std::numeric_limits<double>::min(), std::numeric_limits<double>::min()};
+    }
+};
+
 
 struct MapPolygon {
     using polygon_t = std::vector<point_t>;
@@ -77,7 +92,7 @@ struct MapPolygon {
      */
     std::vector<double> get_n_longest_edges_rotation_angles(size_t n) const;
 
-    std::vector<MapPolygon> split_into_pieces(double max_piece_area) const;
+    std::vector<MapPolygon> split_into_pieces(double max_piece_area);
 
     void make_pure_convex();
 
