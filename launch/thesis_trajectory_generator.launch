@@ -8,6 +8,7 @@
   <arg name="KML_FILE_PATH" default="" />
   <arg name="SIMULATION_START_LAT" default="49.541502"/>
   <arg name="SIMULATION_START_LONG" default="15.348656"/>
+  <arg name="ALTITUDE" default="6.0"/>
   <arg name="ENERGY_MODEL_CONFIG_FILE" default = "$(find thesis_trajectory_generator)/custom_configs/energy_model_config.yaml"/>
 
   <!-- set to false if the nodelet should run under an external nodelet manager -->
@@ -42,7 +43,7 @@
       <param name="SIMULATION" type="bool" value="true"/>
       <param name="SIMULATION_START_LAT" type="double" value="$(arg SIMULATION_START_LAT)"/>
       <param name="SIMULATION_START_LONG" type="double" value="$(arg SIMULATION_START_LONG)"/>
-      <param name="ALTITUDE" type="double" value="10"/>
+      <param name="ALTITUDE" type="double" value="$(arg ALTITUDE)"/>
 
 
       <!-- ROS parameters config file -->

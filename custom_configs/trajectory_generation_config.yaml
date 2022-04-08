@@ -9,7 +9,7 @@ enforce_fallback_solver: false
 check_trajectory_deviation:
   enabled: true
   max_deviation: 0.05 # [m]
-  max_iterations: 2 # [-]
+  max_iterations: 3 # [-]
 
 # allows to neglect waypoints in the original path if the new path
 # does not violate max distance from the original path.

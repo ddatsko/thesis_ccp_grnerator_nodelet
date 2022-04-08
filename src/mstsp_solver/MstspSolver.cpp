@@ -221,7 +221,7 @@ namespace mstsp_solver {
                     best_group = random;
                 }
             }
-
+            ++no_improvement_iteration;
 //            std::cout << "Best neighbourhood cost: " << best_neighbourhood_cost << std::endl;
             if (best_neighbourhood_cost < solution_cost_t::max()) {
                 if (tabu_list.size() >= nodes / 4) {
@@ -252,8 +252,6 @@ namespace mstsp_solver {
                     } else {
                         g4_score += m_config.p2;
                     }
-                } else {
-                    ++no_improvement_iteration;
                 }
             }
             // TODO: check if the commented line ie needed
@@ -269,12 +267,13 @@ namespace mstsp_solver {
     // Random shift intra-inter route
     void MstspSolver::get_g1_solution(solution_t &solution) const {
         for (size_t i = 0; i <= solution.size(); ++i) {
-            if (solution[i].size() >= 2) {
-                break;
-            }
             // If each UAV visits only 1 or 0 polygons, there is no need (and it will lead to some errors) to continue
             if (i == solution.size()) {
                 return;
+            }
+
+            if (solution[i].size() >= 2) {
+                break;
             }
         }
         size_t routes = solution.size();
@@ -318,12 +317,13 @@ namespace mstsp_solver {
     // best shift intra-inter route based on exhaustive search
     void MstspSolver::get_g2_solution(solution_t &solution) const {
         for (size_t i = 0; i <= solution.size(); ++i) {
-            if (solution[i].size() >= 2) {
-                break;
-            }
             // If each UAV visits only 1 or 0 polygons, there is no need (and it will lead to some errors) to continue
             if (i == solution.size()) {
                 return;
+            }
+
+            if (solution[i].size() >= 2) {
+                break;
             }
         }
         size_t routes = solution.size();
@@ -372,12 +372,13 @@ namespace mstsp_solver {
     // best swap intra-inter route based on exhaustive search
     void MstspSolver::get_g3_solution(solution_t &solution) const {
         for (size_t i = 0; i <= solution.size(); ++i) {
-            if (solution[i].size() >= 2) {
-                break;
-            }
             // If each UAV visits only 1 or 0 polygons, there is no need (and it will lead to some errors) to continue
             if (i == solution.size()) {
                 return;
+            }
+
+            if (solution[i].size() >= 2) {
+                break;
             }
         }
         size_t routes = solution.size();
@@ -420,12 +421,13 @@ namespace mstsp_solver {
 
     void MstspSolver::get_g4_solution(solution_t &solution) const {
         for (size_t i = 0; i <= solution.size(); ++i) {
-            if (solution[i].size() >= 2) {
-                break;
-            }
             // If each UAV visits only 1 or 0 polygons, there is no need (and it will lead to some errors) to continue
             if (i == solution.size()) {
                 return;
+            }
+
+            if (solution[i].size() >= 2) {
+                break;
             }
         }
         size_t routes = solution.size();

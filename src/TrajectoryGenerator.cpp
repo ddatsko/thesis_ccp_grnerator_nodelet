@@ -66,7 +66,7 @@ namespace trajectory_generatiion {
         }
         // | ---------------- some data post-processing --------------- |
 
-        m_trajectory_generator_service_client = nh.serviceClient<mrs_msgs::PathSrv>("/" + m_uav_name + "/trajectory_generation/path");
+        m_trajectory_generator_service_client = nh.serviceClient<mrs_msgs::PathSrv>("/" + m_uav_name + "/path_to_follow");
 
         // | --------------------- tf transformer --------------------- |
         m_transformer = mrs_lib::Transformer("TrajectoryGenerator", m_uav_name);
@@ -103,7 +103,7 @@ namespace trajectory_generatiion {
 
         std::vector<MapPolygon> polygons_divided;
         for (auto &p: polygons_decomposed) {
-            auto divided = p.split_into_pieces(70000);
+            auto divided = p.split_into_pieces(700000);
             polygons_divided.insert(polygons_divided.end(), divided.begin(), divided.end());
         }
         polygons_decomposed = polygons_divided;
@@ -122,7 +122,7 @@ namespace trajectory_generatiion {
 
         EnergyCalculator energy_calculator(m_energy_config);
         point_t starting_point = gps_coordinates_to_meters({m_simulation_start_long, m_simulation_start_lat});
-        mstsp_solver::SolverConfig solver_config {{0, M_PI_2, M_PI, 0}, 5, starting_point, 3};
+        mstsp_solver::SolverConfig solver_config {{0, M_PI_2,}, 10, starting_point, 3};
         mstsp_solver::MstspSolver solver(solver_config, polygons_decomposed, energy_calculator, shortest_path_calculator);
 
         auto uav_paths = solver.solve();
@@ -142,14 +142,14 @@ namespace trajectory_generatiion {
 
         // TODO: make the step parameter be loaded by the param loader, but converted to meters,
         // so it is more convenient to convert it to the drone altitude
-        /* Graph g(polygon, M_PI / 4, 0.00007);
+//         Graph g(polygon, M_PI / 4, 0.00007);
 
 
 
 
         if (m_simulation) {
-          auto path_points = sweeping(g);
-          if (path_points.empty()) {
+//          auto path_points = sweeping(g);
+          if (uav_paths[0].empty()) {
               ROS_ERROR("[TrajectoryGenerator]: algorithms was not able to generate the path");
               ros::shutdown();
               return;
@@ -158,8 +158,16 @@ namespace trajectory_generatiion {
 
  //         estimate_path_energy_consumption(path_points, 0.9, 4, 0.119, battery, 0.0215);
 
-          ROS_INFO_STREAM("[TrajectoryGenerator]: Generated path of length " << path_points.size() << "  sending it to the drone");
-          auto path_to_follow = _generate_path_for_simulation_one_drone(path_points);
+          size_t longest_path_ind = 0;
+          size_t longest_path = 0;
+          for (size_t i = 0; i < uav_paths.size(); ++i) {
+              if (uav_paths[i].size() > longest_path) {
+                  longest_path  = uav_paths[i].size();
+                  longest_path_ind = i;
+              }
+          }
+          ROS_INFO_STREAM("[TrajectoryGenerator]: Generated path of length " << uav_paths[longest_path_ind].size() << "  sending it to the drone");
+          auto path_to_follow = _generate_path_for_simulation_one_drone(uav_paths[longest_path_ind], 11);
 
 //          EnergyCalculator energy_calculator(m_energy_config);
 
@@ -185,18 +193,34 @@ namespace trajectory_generatiion {
           ros::shutdown();
           return;
         }
-         */
+
         ROS_INFO_ONCE("[TrajectoryGenerator]: initialized");
 
         m_is_initialized = true;
     }
 //}
 
-mrs_msgs::Path TrajectoryGenerator::_generate_path_for_simulation_one_drone(std::vector<std::pair<double, double>> &points_to_visit) {
+mrs_msgs::Path TrajectoryGenerator::_generate_path_for_simulation_one_drone(std::vector<std::pair<double, double>> &points_to_visit,
+                                                                            double max_distance_between_points) {
   mrs_msgs::Path path;
-  if (not m_simulation) {
+  if (not m_simulation || points_to_visit.empty()) {
     // Return an empty message if the algorithm is running not for a simulation
     return path;
+  }
+  std::cout << "Points to visit: " << points_to_visit.size() << std::endl;
+  std::vector<std::pair<double, double>> points_to_visit_dense;
+  points_to_visit_dense.push_back(points_to_visit.front());
+  for (size_t i = 1; i < points_to_visit.size(); ++i) {
+      double distance = distance_between_points(points_to_visit[i - 1], points_to_visit[i]);
+      int new_points_in_segment = std::ceil(std::max(0.0, distance / max_distance_between_points - 1));
+      std::cout << "New points: " << new_points_in_segment << std::endl;
+      double dx = (points_to_visit[i].first - points_to_visit[i - 1].first) / (new_points_in_segment + 1);
+      double dy = (points_to_visit[i].second - points_to_visit[i - 1].second) / (new_points_in_segment + 1);
+
+//      points_to_visit_dense.push_back(points_to_visit[i - 1]);
+      for (int j = 1; j < new_points_in_segment + 2; ++j) {
+          points_to_visit_dense.emplace_back(points_to_visit[i - 1].first + dx * j, points_to_visit[i - 1].second + dy * j);
+      }
   }
 
   // Set the parameters for trajectory generation
@@ -215,13 +239,17 @@ mrs_msgs::Path TrajectoryGenerator::_generate_path_for_simulation_one_drone(std:
 
   std::vector<mrs_msgs::Reference> points;
 
-  for (const auto &p: points_to_visit) {
+  for (auto p: points_to_visit_dense) {
     mrs_msgs::Reference point_3d;
-    point_3d.heading = 1;
+    point_3d.heading = 6;
 
-//    point_3d.position.x = (p.first * METERS_IN_LAT_DEGREE) - (m_simulation_start_lat * METERS_IN_LAT_DEGREE);
-//    point_3d.position.y = (p.second * METERS_IN_LON_DEGREE) - (m_simulation_start_long * METERS_IN_LON_DEGREE);
+    const double METERS_IN_DEGREE = 111319.5;
+
+    p = meters_to_gps_coordinates(p);
+    point_3d.position.x = (p.first * METERS_IN_DEGREE) - (m_simulation_start_long * METERS_IN_DEGREE);
+    point_3d.position.y = (p.second * METERS_IN_DEGREE) - (m_simulation_start_lat * METERS_IN_DEGREE);
     point_3d.position.z = m_drones_altitude;
+    std::cout << "Altitude: " << m_drones_altitude << std::endl;
     points.push_back(point_3d);
   }
   path.points = points;

@@ -58,7 +58,15 @@ namespace trajectory_generatiion {
 
         ros::ServiceClient m_trajectory_generator_service_client;
 
-        mrs_msgs::Path _generate_path_for_simulation_one_drone(std::vector<std::pair<double, double>> &points_to_visit);
+        /*!
+         * Generate path for one drone flying in a simulation
+         * @param points_to_visit Points that need to be visited in the appropriate order
+         * @param max_distance_between_points Max distance between two consecutive points. If initial distance between
+         * consecutive points is larger, new ones will be added
+         * @return Path that can be sent to the follower or trajectory generator to follow it
+         */
+        mrs_msgs::Path _generate_path_for_simulation_one_drone(std::vector<std::pair<double, double>> &points_to_visit,
+                                                               double max_distance_between_points = std::numeric_limits<double>::max());
     };
 //}
 

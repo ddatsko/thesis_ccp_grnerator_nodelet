@@ -45,7 +45,11 @@ windows:
   - path_generation:
       layout: tiled
       panes:
-        - 'waitForControl; sleep 15; rosservice call /$UAV_NAME/control_manager/use_safety_area "{data: false}"; roslaunch thesis_trajectory_generator thesis_trajectory_generator.launch KML_FILE_PATH:=$(echo `pwd`/test_no_lake.kml) SIMULATION_START_LAT:=50.1231729 SIMULATION_START_LONG:=14.3285634 ALTITUDE:=10'
+        - 'waitForControl; sleep 20; rosservice call /$UAV_NAME/control_manager/use_safety_area "{data: false}"; roslaunch thesis_trajectory_generator thesis_trajectory_generator.launch KML_FILE_PATH:=$(echo `pwd`/extremely_simple.kml) SIMULATION_START_LAT:=48.9786716 SIMULATION_START_LONG:=24.1731415 ALTITUDE:=6'
+  - path_following:
+      layout: tiled
+      panes:
+        - 'waitForControl; sleep 5; roslaunch path_follower path_follower.launch'
   - layout:
       layout: tiled
       panes:
