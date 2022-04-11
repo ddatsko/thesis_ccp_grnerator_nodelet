@@ -3,6 +3,7 @@
 #include <cmath>
 #include <iostream>
 #include <random>
+#include <mrs_lib/gps_conversions.h>
 
 
 const double METERS_IN_DEGREE = 111319.5;
@@ -85,6 +86,12 @@ double distance_between_points(point_t p1, point_t p2) {
 
 // TODO: test this
 point_t gps_coordinates_to_meters(point_t p) {
+    // -465711, -5249470
+    std::string zone_res;
+    point_t res_test;
+    mrs_lib::LLtoUTM(p.second, p.first, res_test.first, res_test.second, zone_res);
+    std::cout << res_test.first << ", " << res_test.second << ", zone: " << zone_res << std::endl;
+
     point_t res;
     res.second = p.second * METERS_IN_DEGREE;
     res.first = std::cos((p.second / 180.0) * M_PI) * p.first * METERS_IN_DEGREE;
@@ -93,6 +100,8 @@ point_t gps_coordinates_to_meters(point_t p) {
 
 point_t meters_to_gps_coordinates(point_t p) {
     point_t res;
+//    mrs_lib::UTMtoLL(p.first, p.second, )
+
     res.second = p.second / METERS_IN_DEGREE;
     res.first = p.first / (std::cos(res.second / 180.0 * M_PI) * METERS_IN_DEGREE);
     return res;

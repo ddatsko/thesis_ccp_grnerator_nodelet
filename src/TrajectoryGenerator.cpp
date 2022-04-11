@@ -213,7 +213,6 @@ mrs_msgs::Path TrajectoryGenerator::_generate_path_for_simulation_one_drone(std:
   for (size_t i = 1; i < points_to_visit.size(); ++i) {
       double distance = distance_between_points(points_to_visit[i - 1], points_to_visit[i]);
       int new_points_in_segment = std::ceil(std::max(0.0, distance / max_distance_between_points - 1));
-      std::cout << "New points: " << new_points_in_segment << std::endl;
       double dx = (points_to_visit[i].first - points_to_visit[i - 1].first) / (new_points_in_segment + 1);
       double dy = (points_to_visit[i].second - points_to_visit[i - 1].second) / (new_points_in_segment + 1);
 
@@ -226,7 +225,7 @@ mrs_msgs::Path TrajectoryGenerator::_generate_path_for_simulation_one_drone(std:
   // Set the parameters for trajectory generation
   path.header.stamp = ros::Time::now();
   path.header.seq = sequence_counter++;
-  path.header.frame_id = "gps_origin";
+  path.header.frame_id = "latlon_origin";
 
   path.fly_now = true;
   path.use_heading = false;
@@ -240,20 +239,30 @@ mrs_msgs::Path TrajectoryGenerator::_generate_path_for_simulation_one_drone(std:
   std::vector<mrs_msgs::Reference> points;
 
   for (auto p: points_to_visit_dense) {
-    mrs_msgs::Reference point_3d;
-    point_3d.heading = 6;
-
-    const double METERS_IN_DEGREE = 111319.5;
+    mrs_msgs::ReferenceStamped point_3d;
+    point_3d.header.frame_id = "latlon_origin";
+    point_3d.reference.heading = 6;
 
     p = meters_to_gps_coordinates(p);
-    point_3d.position.x = (p.first * METERS_IN_DEGREE) - (m_simulation_start_long * METERS_IN_DEGREE);
-    point_3d.position.y = (p.second * METERS_IN_DEGREE) - (m_simulation_start_lat * METERS_IN_DEGREE);
-    point_3d.position.z = m_drones_altitude;
-    std::cout << "Altitude: " << m_drones_altitude << std::endl;
-    points.push_back(point_3d);
+    std::cout << "GPS: " << p.first << " " << p.second << std::endl;
+    point_3d.reference.position.x = p.second;
+    point_3d.reference.position.y = p.first;
+    point_3d.reference.position.z = m_drones_altitude;
+
+    points.push_back(point_3d.reference);
+//    auto transformed_reference = m_transformer.transformSingle("utm_origin", point_3d);
+//    if (!transformed_reference.has_value()) {
+//        ROS_ERROR("Could not transform point");
+//        return path;
+//    }
+//    std::cout << transformed_reference->reference.position.x << " " << transformed_reference->reference.position.y << std::endl;
+//    transformed_reference->reference.heading = 6;
+//    points.push_back(transformed_reference->reference);
   }
   path.points = points;
   return path;
+
+
 
 }
 
