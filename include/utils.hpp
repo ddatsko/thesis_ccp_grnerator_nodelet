@@ -47,6 +47,8 @@ int generate_random_number();
 
 bool polygon_convex(std::vector<point_t> polygon);
 
+void make_polygon_clockwise(polygon_t &polygon);
+
 /*!
  * Get the rotation of the segment (as vector starting at first point) according to the Ox axis
  * @param segment Segment, rotation for which will be found

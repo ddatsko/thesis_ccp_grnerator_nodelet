@@ -25,7 +25,7 @@ namespace mstsp_solver {
 //        std::cout << "Rotation angles num: " << m_config.rotation_angles.size() << std::endl;
         for (size_t i = 0; i < decomposed_polygons.size(); ++i) {
             m_target_sets.emplace_back(i, decomposed_polygons[i], m_config.sweeping_step, m_energy_calculator,
-                                       m_config.rotation_angles.size());
+                                       m_config.rotations_per_cell);
         }
     }
 

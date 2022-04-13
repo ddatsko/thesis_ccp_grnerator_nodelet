@@ -43,6 +43,8 @@ struct energy_calculator_config_t {
     
 
 class EnergyCalculator {
+public:
+    double get_optimal_speed() {return v_r;}
 private:
   energy_calculator_config_t config;
   double v_r; // speed at which the drone can cover the longest range [m/s]
@@ -92,7 +94,7 @@ public:
    * @return The amount of spent energy to follow the whole path in Joules [J]
    */
   double calculate_path_energy_consumption(const std::vector<std::pair<double, double>> &path) const;
-   
+
 };
 
 #endif

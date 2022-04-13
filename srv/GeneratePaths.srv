@@ -1,0 +1,29 @@
+geometry_msgs/Polygon fly_zone
+geometry_msgs/Polygon[] no_fly_zones
+
+uint8 number_of_drones
+
+float32 sweeping_step
+uint16 drones_altitude
+float64 start_lat
+float64 start_lon
+
+uint8 rotations_per_cell
+uint16 no_improvement_cycles_before_stop
+
+bool override_battery_model
+float64 battery_cell_capacity
+uint8 battery_number_of_cells
+
+bool override_drone_parameters
+float32 drone_mass
+float32 drone_area
+float32 average_acceleration
+float32 propeller_radius
+uint8 number_of_propellers
+---
+bool success
+string message
+mrs_msgs/ReferenceList[] paths_gps
+float64[] energy_consumptions
+

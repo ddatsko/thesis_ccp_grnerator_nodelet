@@ -17,6 +17,12 @@
   <depend>std_msgs</depend>
   <depend>mrs_lib</depend>
   <depend>nav_msgs</depend>
+  <depend>geometry_msgs</depend>
+
+  <build_depend>message_generation</build_depend>
+  <exec_depend>message_runtime</exec_depend>
+  <build_export_depend>message_runtime</build_export_depend>
+
 
   <export>
     <!-- The plugins.xml file defines nodelet as a plugin -->

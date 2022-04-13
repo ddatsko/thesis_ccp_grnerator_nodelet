@@ -23,24 +23,6 @@ namespace {
         }
         return point;
     }
-
-    /*!
-     * Make the polygon be directed clockwise (when travelling from the first to last point,
-     * the area inside of polygon is always on the right) for the convenience of working with it
-     */
-    void make_polygon_clockwise(polygon_t &polygon) {
-        if (polygon.size() <= 2) {
-            return;
-        }
-        double angle = M_PI - angle_between_vectors(polygon[polygon.size() - 2], polygon[0], polygon[1]);
-        for (size_t i = 0; i + 2 < polygon.size(); ++i) {
-            angle += M_PI - angle_between_vectors(polygon[i], polygon[i + 1], polygon[i + 2]);
-        }
-        // If the outer angle of the whole polygon is -2 * pi -- we need to reverse it
-        if (std::abs(-2 * M_PI - angle) < std::abs(2 * M_PI - angle)) {
-            std::reverse(polygon.begin(), polygon.end());
-        }
-    }
 }
 
 MapPolygon::polygon_t get_points_from_string(std::string kml_file_string) {

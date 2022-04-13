@@ -23,6 +23,7 @@
 #include <std_msgs/String.h>
 #include <vector>
 #include "EnergyCalculator.h"
+#include <thesis_trajectory_generator/GeneratePaths.h>
 
 namespace trajectory_generatiion {
 
@@ -45,6 +46,7 @@ namespace trajectory_generatiion {
         double m_simulation_start_long;
         double m_drones_altitude;
         energy_calculator_config_t m_energy_config;
+        std::vector<mrs_msgs::Path> m_latest_generated_paths;
 
         /* other parameters */
         int sequence_counter = 0;
@@ -57,6 +59,9 @@ namespace trajectory_generatiion {
       
 
         ros::ServiceClient m_trajectory_generator_service_client;
+
+        ros::ServiceServer m_generate_paths_service_server;
+        bool callback_generate_paths(thesis_trajectory_generator::GeneratePaths::Request &req, thesis_trajectory_generator::GeneratePaths::Response &res);
 
         /*!
          * Generate path for one drone flying in a simulation

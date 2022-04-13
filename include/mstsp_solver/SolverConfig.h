@@ -10,7 +10,7 @@
 
 namespace mstsp_solver {
     struct SolverConfig {
-        std::vector<double> rotation_angles;
+        int rotations_per_cell;
         double sweeping_step;
         point_t starting_point;
         size_t n_uavs;
