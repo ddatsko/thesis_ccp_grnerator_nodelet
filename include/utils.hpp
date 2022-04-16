@@ -43,6 +43,10 @@ point_t gps_coordinates_to_meters(point_t p);
 
 point_t meters_to_gps_coordinates(point_t p);
 
+point_t gps_coordinates_to_meters(point_t p, point_t origin);
+
+point_t meters_to_gps_coordinates(point_t p, point_t origin);
+
 int generate_random_number();
 
 bool polygon_convex(std::vector<point_t> polygon);

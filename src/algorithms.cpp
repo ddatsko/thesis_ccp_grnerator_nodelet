@@ -2,6 +2,8 @@
 #include <algorithm>
 #include <utils.hpp>
 #include "custom_types.hpp"
+#include <iostream>
+#include <cmath>
 
 
 namespace {
@@ -10,6 +12,9 @@ namespace {
                (segment.second.first - segment.first.first) + segment.first.second;
     }
 
+
+
+#define PRINT_SEGMENT(s) std::cout << (s).first.first << ", " << (s).first.second << ";   " << (s).second.second << ", " << (s).second.second
     /*!
      * Add new polygon detected by trapezoidal decomposition to the existing set of polygons
      * Merges the polygon with an existing one if new polygon's left edge is
@@ -167,7 +172,6 @@ vpdd sweeping(const MapPolygon &polygon, double angle, double sweeping_step, boo
     return res_path;
 }
 
-
 // NOTE: this function assumes that all the non-fly zones are located inside the fly-zone area,
 // and no non-fly zones overlap
 std::vector<MapPolygon> trapezoidal_decomposition(const MapPolygon &polygon, decomposition_type_t decomposition_type) {
@@ -191,6 +195,7 @@ std::vector<MapPolygon> trapezoidal_decomposition(const MapPolygon &polygon, dec
         // Two segments starting in this point are moving to the right.
         // Case of area is split by a no-fly zone inside (e.g. island)
         if (neighbors.first.first >= x && neighbors.second.first >= x) {
+            std::cout << "DIVERGE" << std::endl;
             bool found_space = false;
             for (size_t i = 0; i < current_segments.size(); ++i) {
                 if (vertical_line_segment_intersection(current_segments[i], x) > y) {
@@ -219,9 +224,9 @@ std::vector<MapPolygon> trapezoidal_decomposition(const MapPolygon &polygon, dec
         }
 
 
-        // TODO: rewrite this without code copy-paste
         // Case when two segments converge. Thus, two new trapezoids must be added and two edges deleted
         if (neighbors.first.first <= x && neighbors.second.first <= x) {
+            std::cout << "CONVERGE" << std::endl;
             bool found_space = false;
             for (size_t i = 0; i < current_segments.size(); ++i) {
                 if (current_segments[i].second == p) {
@@ -251,7 +256,7 @@ std::vector<MapPolygon> trapezoidal_decomposition(const MapPolygon &polygon, dec
             }
             continue;
         }
-
+        std::cout << "NORMAL" << std::endl;
         // The third case: two neighbors are on different sides of the line
         if (neighbors.second.first < neighbors.first.first) {
             std::swap(neighbors.first, neighbors.second);
@@ -268,7 +273,7 @@ std::vector<MapPolygon> trapezoidal_decomposition(const MapPolygon &polygon, dec
                     current_segments[i + 1].first = {x, vertical_line_segment_intersection(current_segments[i + 1], x)};
                 } else {
                     // The gap between segments[i] and segments[i - 1] is the fly-zone
-                    add_polygon(res, polygon_from_2_segments(current_segments[i], current_segments[i - 1], x),
+                    add_polygon(res, polygon_from_2_segments(current_segments[i - 1], current_segments[i], x),
                                 decomposition_type);
                     current_segments[i - 1].first = {x, vertical_line_segment_intersection(current_segments[i - 1], x)};
                 }

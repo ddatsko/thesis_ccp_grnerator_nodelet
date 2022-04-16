@@ -7,6 +7,7 @@ float32 sweeping_step
 uint16 drones_altitude
 float64 start_lat
 float64 start_lon
+float64 decomposition_rotation
 
 uint8 rotations_per_cell
 uint16 no_improvement_cycles_before_stop

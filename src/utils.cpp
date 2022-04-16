@@ -90,9 +90,9 @@ point_t gps_coordinates_to_meters(point_t p) {
     // -465711, -5249470
     std::string zone_res;
     point_t res_test;
-    mrs_lib::LLtoUTM(p.second, p.first, res_test.first, res_test.second, zone_res);
-    std::cout << res_test.first << ", " << res_test.second << ", zone: " << zone_res << std::endl;
-
+//    mrs_lib::LLtoUTM(p.second, p.first, res_test.first, res_test.second, zone_res);
+//    std::cout << res_test.first << ", " << res_test.second << ", zone: " << zone_res << std::endl;
+//
     point_t res;
     res.second = p.second * METERS_IN_DEGREE;
     res.first = std::cos((p.second / 180.0) * M_PI) * p.first * METERS_IN_DEGREE;
@@ -165,4 +165,14 @@ void make_polygon_clockwise(polygon_t &polygon) {
     if (std::abs(-2 * M_PI - angle) < std::abs(2 * M_PI - angle)) {
         std::reverse(polygon.begin(), polygon.end());
     }
+}
+
+point_t gps_coordinates_to_meters(point_t p, point_t origin) {
+    const double meters_in_long_degree = std::cos((origin.first / 180.0) * M_PI) * METERS_IN_DEGREE;
+    return {p.second * meters_in_long_degree - origin.second * meters_in_long_degree, p.first * METERS_IN_DEGREE - origin.first * METERS_IN_DEGREE};
+}
+
+point_t meters_to_gps_coordinates(point_t p, point_t origin) {
+    const double meters_in_long_degree = std::cos((origin.first / 180.0) * M_PI) * METERS_IN_DEGREE;
+    return {(p.second + origin.first * METERS_IN_DEGREE) / METERS_IN_DEGREE, (p.first + origin.second * meters_in_long_degree) / meters_in_long_degree};
 }

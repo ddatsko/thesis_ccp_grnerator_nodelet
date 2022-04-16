@@ -95,11 +95,11 @@ ShortestPathCalculator::ShortestPathCalculator(const MapPolygon &polygon) {
     // Get the list of pairs of points, for which there is no direct path even if they can "see" each other
     auto no_direct_path_pairs = no_direct_path(polygon);
 
-//    std::cout << "No pairs: " << std::endl;
-//    for (auto &p: no_direct_path_pairs) {
-//        std::cout << p.first.first << "," << p.first.second << "   " << p.second.first << "," << p.second.second << std::endl;
-//    }
-//    std::cout << "------------------------" << std::endl;
+    std::cout << "No pairs: " << std::endl;
+    for (auto &p: no_direct_path_pairs) {
+        std::cout << p.first.first << "," << p.first.second << "   " << p.second.first << "," << p.second.second << std::endl;
+    }
+    std::cout << "------------------------" << std::endl;
 
     // O(N^3) building of the matrix. Ok as the algorithm itself runs on O(N^3)
     for (size_t i = 0; i < m_polygon_points.size(); i++) {
