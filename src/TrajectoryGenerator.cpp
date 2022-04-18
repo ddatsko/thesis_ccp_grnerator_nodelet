@@ -251,6 +251,10 @@ namespace trajectory_generatiion {
             return true;
         }
 
+        std::for_each(polygons_decomposed.begin(), polygons_decomposed.end(), [&](MapPolygon &p){p = p.rotated(-req.decomposition_rotation);});
+        polygon = polygon.rotated(-req.decomposition_rotation);
+
+
 
         {
             std::ofstream of{"/home/mrs/polygons/main.csv"};
@@ -269,13 +273,6 @@ namespace trajectory_generatiion {
             }
             of.close();
         }
-
-
-
-        std::for_each(polygons_decomposed.begin(), polygons_decomposed.end(), [&](MapPolygon &p){p = p.rotated(-req.decomposition_rotation);});
-        polygon = polygon.rotated(-req.decomposition_rotation);
-
-
 
 
 
@@ -298,9 +295,11 @@ namespace trajectory_generatiion {
         auto solver_res = solver.solve();
         res.success = true;
         res.paths_gps.resize(solver_res.size());
+        res.energy_consumptions.resize(solver_res.size());
         for (size_t i = 0; i < solver_res.size(); ++i) {
             res.paths_gps[i].header.frame_id = "latlon_origin";
             res.paths_gps[i].list = _generate_path_for_simulation_one_drone(solver_res[i], gps_transform_origin, req.sweeping_step).points;
+            res.energy_consumptions[i] = energy_calculator.calculate_path_energy_consumption(solver_res[i]);
         }
         return true;
     }
@@ -317,19 +316,19 @@ namespace trajectory_generatiion {
         }
         std::cout << "Points to visit: " << points_to_visit.size() << std::endl;
         std::vector<std::pair<double, double>> points_to_visit_dense = points_to_visit;
-//        points_to_visit_dense.push_back(points_to_visit.front());
-//        for (size_t i = 1; i < points_to_visit.size(); ++i) {
-//            double distance = distance_between_points(points_to_visit[i - 1], points_to_visit[i]);
-//            int new_points_in_segment = std::ceil(std::max(0.0, distance / max_distance_between_points - 1));
-//            double dx = (points_to_visit[i].first - points_to_visit[i - 1].first) / (new_points_in_segment + 1);
-//            double dy = (points_to_visit[i].second - points_to_visit[i - 1].second) / (new_points_in_segment + 1);
-//
-////      points_to_visit_dense.push_back(points_to_visit[i - 1]);
-//            for (int j = 1; j < new_points_in_segment + 2; ++j) {
-//                points_to_visit_dense.emplace_back(points_to_visit[i - 1].first + dx * j,
-//                                                   points_to_visit[i - 1].second + dy * j);
-//            }
-//        }
+        points_to_visit_dense.push_back(points_to_visit.front());
+        for (size_t i = 1; i < points_to_visit.size(); ++i) {
+            double distance = distance_between_points(points_to_visit[i - 1], points_to_visit[i]);
+            int new_points_in_segment = std::ceil(std::max(0.0, distance / max_distance_between_points - 1));
+            double dx = (points_to_visit[i].first - points_to_visit[i - 1].first) / (new_points_in_segment + 1);
+            double dy = (points_to_visit[i].second - points_to_visit[i - 1].second) / (new_points_in_segment + 1);
+
+//      points_to_visit_dense.push_back(points_to_visit[i - 1]);
+            for (int j = 1; j < new_points_in_segment + 2; ++j) {
+                points_to_visit_dense.emplace_back(points_to_visit[i - 1].first + dx * j,
+                                                   points_to_visit[i - 1].second + dy * j);
+            }
+        }
 
         // Set the parameters for trajectory generation
         path.header.stamp = ros::Time::now();

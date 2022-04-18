@@ -8,9 +8,17 @@
 #include <map>
 #include <vector>
 #include "MapPolygon.hpp"
+#include <unordered_map>
 
 struct shortest_path_calculation_error: public std::runtime_error {
     using runtime_error::runtime_error;
+};
+
+struct point_pair_hash {
+    size_t operator()(const std::pair<point_t, point_t> &p) const {
+        auto hash = std::hash<double>{};
+        return hash(p.first.first) + hash(p.first.second) + hash(p.second.first) + hash(p.second.second);
+    };
 };
 
 /*!
@@ -23,6 +31,7 @@ private:
     std::vector<point_t> m_polygon_points;
     std::vector<std::vector<double>> m_floyd_warshall_d;
     std::vector<std::vector<size_t>> m_next_vertex_in_path;
+    mutable std::unordered_map<std::pair<point_t, point_t>, std::vector<std::pair<double, double>>, point_pair_hash> paths_cache;
 
     void run_floyd_warshall();
 

@@ -48,6 +48,11 @@ double segment_length(const segment_t &segment) {
 
 
 bool segments_intersect(const segment_t &s1, const segment_t &s2) {
+    // Consider that segments that have a common point does not intersect
+    if (s1.first == s2.first || s1.first == s2.second || s1.second == s2.first || s1.second == s2.second) {
+        return false;
+    }
+
     auto intersection = segment_segment_intersection(s1, s2);
     // Return true only of the intersection of lines is between the constraints of the first and the second segments
     return intersection.first >= std::min(s1.first.first, s1.second.first) &&

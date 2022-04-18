@@ -7,14 +7,14 @@
 
 
 namespace {
+    constexpr double POINT_EPS = 1e-5;
+
     double vertical_line_segment_intersection(const segment_t &segment, double x) {
         return (x - segment.first.first) * (segment.second.second - segment.first.second) /
                (segment.second.first - segment.first.first) + segment.first.second;
     }
 
 
-
-#define PRINT_SEGMENT(s) std::cout << (s).first.first << ", " << (s).first.second << ";   " << (s).second.second << ", " << (s).second.second
     /*!
      * Add new polygon detected by trapezoidal decomposition to the existing set of polygons
      * Merges the polygon with an existing one if new polygon's left edge is
@@ -34,6 +34,19 @@ namespace {
             return;
         }
 
+//        std::cout << "Polygons" << std::endl;
+//        for (const auto &pol: polygons) {
+//            for (const auto &p: pol.fly_zone_polygon_points) {
+//                std::cout << p.first << ", " << p.second << std::endl;
+//            }
+//            std::cout << "----------------------------" << std::endl;
+//        }
+//        std::cout << "Adding polygon: " << std::endl;
+//        for (const auto &p: new_polygon.fly_zone_polygon_points) {
+//            std::cout << p.first << ", " << p.second << std::endl;
+//        }
+//        std::cout << "----------------------------" << std::endl;
+
         bool inserted = false;
 
         if (new_polygon.fly_zone_polygon_points.size() <= 2) {
@@ -50,10 +63,13 @@ namespace {
                 throw polygon_decomposition_error("Merging polygon with an empty polygon...");
             }
             auto rightmost_edge = p.rightmost_edge();
-
+//            std::cout << "Rightmost edge: " << rightmost_edge.first.first << ", " << rightmost_edge.first.second << ";   " << rightmost_edge.second.first << ", " << rightmost_edge.second.second << std::endl;
             // If merging edge matches
-            if (rightmost_edge.second == merging_edge.first &&
-                rightmost_edge.first == merging_edge.second) {
+            if (isclose(rightmost_edge.second.first, merging_edge.first.first, POINT_EPS) &&
+              isclose(rightmost_edge.second.second, merging_edge.first.second, POINT_EPS) &&
+              isclose(rightmost_edge.first.first, merging_edge.second.first, POINT_EPS) &&
+              isclose(rightmost_edge.first.second, merging_edge.second.second, POINT_EPS)) {
+//                std::cout << "Inserting" << std::endl;
                 auto p_old = p;
 
                 // Insert edge of the new polygon between merging edge ends excluding duplicates
@@ -86,7 +102,7 @@ MapPolygon polygon_from_2_segments(segment_t s1, segment_t s2, double x) {
         std::swap(s1, s2);
     }
     // Triangle with one point in the left
-    if (s1.first == s2.first) {
+    if (isclose(s1.first, s2.first, POINT_EPS)) {
         polygon.fly_zone_polygon_points.insert(polygon.fly_zone_polygon_points.end(),
                                                {
                                                        s1.first,
@@ -98,7 +114,7 @@ MapPolygon polygon_from_2_segments(segment_t s1, segment_t s2, double x) {
     }
 
     // Triangle with one point which is the same as the point of segments intersection at the right
-    if (s2.second.first == x && s2.second == s1.second) {
+    if (isclose(s2.second.first, x, POINT_EPS) && isclose(s2.second, s1.second, POINT_EPS)) {
         polygon.fly_zone_polygon_points.insert(polygon.fly_zone_polygon_points.end(),
                                                {
                                                        s1.first,
@@ -187,15 +203,15 @@ std::vector<MapPolygon> trapezoidal_decomposition(const MapPolygon &polygon, dec
         const double x = p.first, y = p.second;
         auto neighbors = polygon.point_neighbors(p);
 
-        segment_t lower_segment = {p, (neighbors.first.second < neighbors.second.second ? neighbors.first
+        segment_t lower_segment = {p, (std::sin(get_segment_rotation({p, neighbors.first})) < std::sin(get_segment_rotation({p, neighbors.second})) ? neighbors.first
                                                                                         : neighbors.second)};
-        segment_t upper_segment = {p, (neighbors.first.second < neighbors.second.second ? neighbors.second
+        segment_t upper_segment = {p, (std::sin(get_segment_rotation({p, neighbors.first})) < std::sin(get_segment_rotation({p, neighbors.second}))  ? neighbors.second
                                                                                         : neighbors.first)};
 
         // Two segments starting in this point are moving to the right.
         // Case of area is split by a no-fly zone inside (e.g. island)
         if (neighbors.first.first >= x && neighbors.second.first >= x) {
-            std::cout << "DIVERGE" << std::endl;
+//            std::cout << "DIVERGE" << std::endl;
             bool found_space = false;
             for (size_t i = 0; i < current_segments.size(); ++i) {
                 if (vertical_line_segment_intersection(current_segments[i], x) > y) {
@@ -226,13 +242,20 @@ std::vector<MapPolygon> trapezoidal_decomposition(const MapPolygon &polygon, dec
 
         // Case when two segments converge. Thus, two new trapezoids must be added and two edges deleted
         if (neighbors.first.first <= x && neighbors.second.first <= x) {
-            std::cout << "CONVERGE" << std::endl;
+//            std::cout << "CONVERGE" << std::endl;
             bool found_space = false;
             for (size_t i = 0; i < current_segments.size(); ++i) {
-                if (current_segments[i].second == p) {
+                if (isclose(current_segments[i].second, p, POINT_EPS)) {
+//                    std::cout << "CURRENT SGEMENTS: " << std::endl;
+//                    for (const auto &s: current_segments) {
+//                        std::cout << s.first.first << ", " << s.first.second << ";   " << s.second.first << ", " << s.second.second << std::endl;
+//                    }
+//                    std::cout << "==========================" << std::endl;
+
                     found_space = true;
                     // last two converging segments
                     if (i % 2 == 0) {
+//                        std::cout << "FLY-ZONE CONVERGING" << std::endl;
                         add_polygon(res, polygon_from_2_segments(current_segments[i], current_segments[i + 1], x),
                                     decomposition_type);
                         current_segments.erase(current_segments.begin() + static_cast<long>(i));
@@ -256,7 +279,7 @@ std::vector<MapPolygon> trapezoidal_decomposition(const MapPolygon &polygon, dec
             }
             continue;
         }
-        std::cout << "NORMAL" << std::endl;
+//        std::cout << "NORMAL" << std::endl;
         // The third case: two neighbors are on different sides of the line
         if (neighbors.second.first < neighbors.first.first) {
             std::swap(neighbors.first, neighbors.second);
@@ -264,7 +287,7 @@ std::vector<MapPolygon> trapezoidal_decomposition(const MapPolygon &polygon, dec
 
         bool segment_found = false;
         for (size_t i = 0; i < current_segments.size(); ++i) {
-            if (current_segments[i].second == p) {
+            if (isclose(current_segments[i].second, p, POINT_EPS)) {
                 segment_found = true;
                 if (i % 2 == 0) {
                     // The gap between segments[i] and segments[i + 1] is the fly-zone
