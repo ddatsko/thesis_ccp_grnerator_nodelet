@@ -68,137 +68,13 @@ namespace trajectory_generatiion {
                                                               &TrajectoryGenerator::callback_generate_paths, this);
 
 
-/*        MapPolygon polygon;
-        try {
-            polygon.load_polygon_from_file(m_kml_file_path);
-        } catch (kml_file_parse_error &e) {
-            ROS_ERROR_STREAM("[TrajectoryGenerator]: " << e.what());
-            ros::shutdown();
-            return;
-        }
-
-        ShortestPathCalculator shortest_path_calculator{polygon};
-
-        std::vector<MapPolygon> polygons_decomposed;
-        try {
-            polygons_decomposed = trapezoidal_decomposition(polygon, BOUSTROPHEDON_WITH_CONVEX_POLYGONS);
-        } catch (const polygon_decomposition_error &e) {
-            std::cout << e.what() << std::endl;
-        }
-
-        {
-            std::ofstream of{"/home/mrs/polygons/main.csv"};
-            for (auto &p: polygon.fly_zone_polygon_points) {
-                of << std::setprecision(10) << p.first << ", " << std::setprecision(10) << p.second << std::endl;
-            }
-            of.close();
-        }
-
-        std::vector<MapPolygon> polygons_divided;
-        for (auto &p: polygons_decomposed) {
-            auto divided = p.split_into_pieces(700000);
-            polygons_divided.insert(polygons_divided.end(), divided.begin(), divided.end());
-        }
-        polygons_decomposed = polygons_divided;
-
-        int counter = 0;
-        for (auto &pol: polygons_decomposed) {
-            std::stringstream filename;
-            filename << "/home/mrs/polygons/" << counter++ << ".csv";
-            std::ofstream of{filename.str()};
-            for (auto &p: pol.fly_zone_polygon_points) {
-                of << std::setprecision(10) << p.first << ", " << std::setprecision(10) << p.second << std::endl;
-            }
-            of.close();
-        }
-        std::cout << "Decomposed..." << std::endl;
-
-        EnergyCalculator energy_calculator(m_energy_config);
-        point_t starting_point = gps_coordinates_to_meters({m_simulation_start_long, m_simulation_start_lat});
-        mstsp_solver::SolverConfig solver_config{2, 10, starting_point, 3};
-        mstsp_solver::MstspSolver solver(solver_config, polygons_decomposed, energy_calculator,
-                                         shortest_path_calculator);
-
-        auto uav_paths = solver.solve();
-
-
-        for (size_t i = 0; i < uav_paths.size(); ++i) {
-            std::stringstream filename_ss;
-            filename_ss << "/home/mrs/polygons/uav" << i << ".csv";
-            std::ofstream of(filename_ss.str());
-            for (const auto &p: uav_paths[i]) {
-                auto point_gps = meters_to_gps_coordinates(p);
-                of << std::setprecision(10) << point_gps.first << ", " << std::setprecision(10) << point_gps.second
-                   << std::endl;
-            }
-        }
-
-        ROS_INFO("[TrajectoryGenerator]: successfully loaded polygon from KML file");
-
-        // TODO: make the step parameter be loaded by the param loader, but converted to meters,
-        // so it is more convenient to convert it to the drone altitude
-//         Graph g(polygon, M_PI / 4, 0.00007);
-
-
-
-
-        if (m_simulation) {
-//          auto path_points = sweeping(g);
-            if (uav_paths[0].empty()) {
-                ROS_ERROR("[TrajectoryGenerator]: algorithms was not able to generate the path");
-                ros::shutdown();
-                return;
-            }
-
-
-            //         estimate_path_energy_consumption(path_points, 0.9, 4, 0.119, battery, 0.0215);
-
-            size_t longest_path_ind = 0;
-            size_t longest_path = 0;
-            for (size_t i = 0; i < uav_paths.size(); ++i) {
-                if (uav_paths[i].size() > longest_path) {
-                    longest_path = uav_paths[i].size();
-                    longest_path_ind = i;
-                }
-            }
-            ROS_INFO_STREAM("[TrajectoryGenerator]: Generated path of length " << uav_paths[longest_path_ind].size()
-                                                                               << "  sending it to the drone");
-            auto path_to_follow = _generate_path_for_simulation_one_drone(uav_paths[longest_path_ind], 11);
-
-//          EnergyCalculator energy_calculator(m_energy_config);
-
-//          std::cout << "Calculated path energy consumption: " << energy_calculator.calculate_path_energy_consumption(path_points) << std::endl;
-
-
-            mrs_msgs::PathSrv srv;
-
-            srv.request.path = path_to_follow;
-            if (m_trajectory_generator_service_client.call(srv)) {
-                if (not srv.response.success) {
-                    ROS_ERROR("[TrajectoryGenerator]: Path could not be generated");
-                    ros::shutdown();
-                    return;
-                } else {
-                    ROS_INFO(
-                            "[TrajectoryGenerator]: Path was generated successfully and drone should start following it");
-                }
-            } else {
-                ROS_ERROR_STREAM (
-                        "[TrajectoryGenerator]: Could not call the service for generating path for the drone: "
-                                << srv.response.message);
-            }
-        } else {
-            ROS_ERROR("[TrajectoryGenerator]: fuunctionality for real world is not implemented yed");
-            ros::shutdown();
-            return;
-        }
-
         ROS_INFO_ONCE("[TrajectoryGenerator]: initialized");
- */
+
         m_is_initialized = true;
 
     }
-//}
+
+
 
     bool TrajectoryGenerator::callback_generate_paths(thesis_trajectory_generator::GeneratePaths::Request &req,
                                                       thesis_trajectory_generator::GeneratePaths::Response &res) {
@@ -209,6 +85,7 @@ namespace trajectory_generatiion {
             res.message = "Fly zone of less than 3 points";
             return true;
         }
+        m_drones_altitude = req.drones_altitude;
 
         point_t gps_transform_origin{req.fly_zone.points.front().x, req.fly_zone.points.front().y};
         // Convert the area from message to custom MapPolygon type
@@ -254,36 +131,27 @@ namespace trajectory_generatiion {
         std::for_each(polygons_decomposed.begin(), polygons_decomposed.end(), [&](MapPolygon &p){p = p.rotated(-req.decomposition_rotation);});
         polygon = polygon.rotated(-req.decomposition_rotation);
 
-
-
-        {
-            std::ofstream of{"/home/mrs/polygons/main.csv"};
-            for (auto &p: polygon.fly_zone_polygon_points) {
-                of << std::setprecision(10) << p.first << ", " << std::setprecision(10) << p.second << std::endl;
-            }
-            of.close();
-        }
-        int counter = 0;
+        std::vector<MapPolygon> polygons_divided;
         for (auto &pol: polygons_decomposed) {
-            std::stringstream filename;
-            filename << "/home/mrs/polygons/" << counter++ << ".csv";
-            std::ofstream of{filename.str()};
-            for (auto &p: pol.fly_zone_polygon_points) {
-                of << std::setprecision(10) << p.first << ", " << std::setprecision(10) << p.second << std::endl;
+            std::cout << "Polygon: " << std::endl;
+            for (const auto &p: pol.fly_zone_polygon_points) {
+                std::cout << p.first << ", " << p.second << std::endl;
             }
-            of.close();
+
+            auto splitted = pol.split_into_pieces(req.max_polygon_area != 0 ? req.max_polygon_area : std::numeric_limits<double>::max());
+            polygons_divided.insert(polygons_divided.end(), splitted.begin(), splitted.end());
+
+            std::cout << "Splitted : " << std::endl;
+            for (const auto &pol_spl: splitted) {
+                std::cout << "Polygon with area " << pol_spl.area() << std::endl;
+                for (const auto &p: pol_spl.fly_zone_polygon_points) {
+                    std::cout << p.first << ", " << p.second << std::endl;
+                }
+                std::cout << "-------------" << std::endl;
+            }
+            std::cout << "================================\n\n\n" << std::endl;
         }
-
-
-
-
-
-//        std::vector<MapPolygon> polygons_divided;
-//        for (auto &p: polygons_decomposed) {
-//            auto divided = p.split_into_pieces(700000); // TODO: make this a parameter and enhance the algorithm for splitting the area
-//            polygons_divided.insert(polygons_divided.end(), divided.begin(), divided.end());
-//        }
-//        polygons_decomposed = polygons_divided;
+        polygons_decomposed = polygons_divided;
 
         EnergyCalculator energy_calculator{energy_config};
         auto starting_point = gps_coordinates_to_meters({req.start_lat, req.start_lon}, gps_transform_origin);
@@ -298,7 +166,8 @@ namespace trajectory_generatiion {
         res.energy_consumptions.resize(solver_res.size());
         for (size_t i = 0; i < solver_res.size(); ++i) {
             res.paths_gps[i].header.frame_id = "latlon_origin";
-            res.paths_gps[i].list = _generate_path_for_simulation_one_drone(solver_res[i], gps_transform_origin, req.sweeping_step).points;
+            auto generated_path =  _generate_path_for_simulation_one_drone(solver_res[i], gps_transform_origin, req.sweeping_step, energy_calculator.get_optimal_speed());
+            res.paths_gps[i] = generated_path;
             res.energy_consumptions[i] = energy_calculator.calculate_path_energy_consumption(solver_res[i]);
         }
         return true;
@@ -306,16 +175,17 @@ namespace trajectory_generatiion {
 
 
     mrs_msgs::Path TrajectoryGenerator::_generate_path_for_simulation_one_drone(
-            std::vector<std::pair<double, double>> &points_to_visit,
+            const std::vector<std::pair<double, double>> &points_to_visit,
             point_t gps_transform_origin,
-            double max_distance_between_points) {
+            double max_distance_between_points,
+            double optimal_speed) {
         mrs_msgs::Path path;
         if (not m_simulation || points_to_visit.empty()) {
             // Return an empty message if the algorithm is running not for a simulation
             return path;
         }
-        std::cout << "Points to visit: " << points_to_visit.size() << std::endl;
-        std::vector<std::pair<double, double>> points_to_visit_dense = points_to_visit;
+
+        std::vector<std::pair<double, double>> points_to_visit_dense;
         points_to_visit_dense.push_back(points_to_visit.front());
         for (size_t i = 1; i < points_to_visit.size(); ++i) {
             double distance = distance_between_points(points_to_visit[i - 1], points_to_visit[i]);
@@ -323,7 +193,6 @@ namespace trajectory_generatiion {
             double dx = (points_to_visit[i].first - points_to_visit[i - 1].first) / (new_points_in_segment + 1);
             double dy = (points_to_visit[i].second - points_to_visit[i - 1].second) / (new_points_in_segment + 1);
 
-//      points_to_visit_dense.push_back(points_to_visit[i - 1]);
             for (int j = 1; j < new_points_in_segment + 2; ++j) {
                 points_to_visit_dense.emplace_back(points_to_visit[i - 1].first + dx * j,
                                                    points_to_visit[i - 1].second + dy * j);
@@ -349,11 +218,11 @@ namespace trajectory_generatiion {
         for (auto p: points_to_visit_dense) {
             mrs_msgs::ReferenceStamped point_3d;
             point_3d.header.frame_id = "latlon_origin";
-            point_3d.reference.heading = 6;
+            point_3d.reference.heading = optimal_speed;
 
             p = meters_to_gps_coordinates(p, gps_transform_origin);
-            point_3d.reference.position.x = p.second;
-            point_3d.reference.position.y = p.first;
+            point_3d.reference.position.x = p.first;
+            point_3d.reference.position.y = p.second;
             point_3d.reference.position.z = m_drones_altitude;
 
             points.push_back(point_3d.reference);
@@ -361,7 +230,6 @@ namespace trajectory_generatiion {
         path.points = points;
         return path;
     }
-
 
 }  // namespace trajectory_generatiion
 

@@ -24,6 +24,7 @@
 #include <vector>
 #include "EnergyCalculator.h"
 #include <thesis_trajectory_generator/GeneratePaths.h>
+#include <thesis_trajectory_generator/LoadPaths.h>
 #include "utils.hpp"
 
 namespace trajectory_generatiion {
@@ -47,7 +48,6 @@ namespace trajectory_generatiion {
         double m_simulation_start_long;
         double m_drones_altitude;
         energy_calculator_config_t m_energy_config;
-        std::vector<mrs_msgs::Path> m_latest_generated_paths;
 
         /* other parameters */
         int sequence_counter = 0;
@@ -64,6 +64,7 @@ namespace trajectory_generatiion {
         ros::ServiceServer m_generate_paths_service_server;
         bool callback_generate_paths(thesis_trajectory_generator::GeneratePaths::Request &req, thesis_trajectory_generator::GeneratePaths::Response &res);
 
+
         /*!
          * Generate path for one drone flying in a simulation
          * @param points_to_visit Points that need to be visited in the appropriate order
@@ -71,9 +72,10 @@ namespace trajectory_generatiion {
          * consecutive points is larger, new ones will be added
          * @return Path that can be sent to the follower or trajectory generator to follow it
          */
-        mrs_msgs::Path _generate_path_for_simulation_one_drone(std::vector<std::pair<double, double>> &points_to_visit,
+        mrs_msgs::Path _generate_path_for_simulation_one_drone(const std::vector<std::pair<double, double>> &points_to_visit,
                                                                point_t gps_transform_origin,
-                                                               double max_distance_between_points = std::numeric_limits<double>::max());
+                                                               double max_distance_between_points = std::numeric_limits<double>::max(),
+                                                               double optimal_speed=1);
     };
 //}
 

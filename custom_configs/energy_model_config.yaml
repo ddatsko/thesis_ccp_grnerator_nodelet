@@ -19,6 +19,6 @@ best_speed_model:
 drone_mass: 0.9 # [kg]
 drone_area: 0.0215 # [m^2]
 average_acceleration: 10 # [m/s^2] Not tested at all, just a random value
-propeller_radius: 0.12 # m
+propeller_radius: 0.119 # m
 number_of_propellers: 4
 

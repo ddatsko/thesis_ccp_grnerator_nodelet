@@ -8,6 +8,7 @@ uint16 drones_altitude
 float64 start_lat
 float64 start_lon
 float64 decomposition_rotation
+float64 max_polygon_area
 
 uint8 rotations_per_cell
 uint16 no_improvement_cycles_before_stop
@@ -25,6 +26,5 @@ uint8 number_of_propellers
 ---
 bool success
 string message
-mrs_msgs/ReferenceList[] paths_gps
+mrs_msgs/Path[] paths_gps
 float64[] energy_consumptions
-

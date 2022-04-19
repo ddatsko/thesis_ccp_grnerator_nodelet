@@ -7,10 +7,12 @@
 #include <ros/ros.h>
 #include "algorithms.hpp"
 
-
+//TODO: make most of methods external functions (maybe, working on not MapPolygons byt ust on vector<pair<double, double>>
 namespace {
     const std::string FLY_ZONE_PLACEMARK_NAME = "fly-zone";
     const std::string NO_FLY_ZONE_PLACEMARK_NAME = "no-fly-zone";
+
+    const double SPLIT_BIN_SEARCH_THRESH = 1e-5;
 
     point_t string_to_point(const std::string &point_string) {
         size_t coma_pos;
@@ -216,120 +218,6 @@ std::vector<double> MapPolygon::get_n_longest_edges_rotation_angles(size_t n) co
     return rotations;
 }
 
-std::vector<MapPolygon> MapPolygon::split_into_pieces(double max_piece_area) {
-    if (max_piece_area > area()) {
-        return {*this};
-    }
-    size_t number_of_pieces = std::ceil(area() / max_piece_area);
-
-    make_pure_convex();
-    make_polygon_clockwise(fly_zone_polygon_points);
-
-    // Find the index of the longest edge in the polygon and
-    size_t longest_edge_i = 0;
-    double longest_edge = std::numeric_limits<double>::min();
-
-    for (size_t i = 0; i + 1 < fly_zone_polygon_points.size(); ++i) {
-        double edge_length = segment_length({fly_zone_polygon_points[i], fly_zone_polygon_points[i + 1]});
-        std::cout << "Length: " << edge_length << std::endl;
-        if (edge_length > longest_edge) {
-            longest_edge = edge_length;
-            longest_edge_i = i;
-        }
-    }
-
-    // Rotate the polygon to make the longest edge vertical
-    // TODO: check if the rotation angle is appropriate and the longest edge is always at the left
-    double rotation_angle = get_segment_rotation({fly_zone_polygon_points[longest_edge_i], fly_zone_polygon_points[longest_edge_i + 1]});
-    std::cout << "angle: " << rotation_angle << std::endl;
-    rotation_angle = -(rotation_angle + 3 * M_PI_2);
-    std::cout << "rotation angle" << rotation_angle << std::endl;
-
-    std::cout << "Not rotated polygon: " << area() << std::endl;
-    for (const auto &p: fly_zone_polygon_points) {
-        std::cout << "(" << std::setprecision(10) << p.first << ", " << std::setprecision(10) << p.second << ")" << std::endl;
-    }
-
-    auto polygon_rotated = rotated(rotation_angle);
-    auto fly_zone = polygon_rotated.fly_zone_polygon_points;
-
-
-    std::cout << "Rotated polygon: " << polygon_rotated.area() << std::endl;
-    for (const auto &p: polygon_rotated.fly_zone_polygon_points) {
-        std::cout << "(" << std::setprecision(10) << p.first << ", " << std::setprecision(10) << p.second << ")" << std::endl;
-    }
-
-    // Assuming that polygon is rotated clockwise and the longest edge is on the left
-    size_t it1 = longest_edge_i;
-    size_t it2 = longest_edge_i + 1;
-    if (it2 == fly_zone.size() - 1) {
-        it2 = 0;
-    }
-    fly_zone.pop_back();
-
-    std::vector<MapPolygon> res;
-    double current_area = 0.0;
-    std::vector<point_t> upper_points {fly_zone[it2]};
-    std::vector<point_t> lower_points {fly_zone[it1]};
-
-    std::cout << "It1: " << it1 << ", It2: " << it2 << std::endl;
-
-    segment_t upper_segment = {fly_zone[it2], fly_zone[(it2 + 1) % fly_zone.size()]};
-    it2 = (it2 + 1) % fly_zone.size();
-    segment_t lower_segment = {fly_zone[it1], fly_zone[(it1 + fly_zone.size() - 1) % fly_zone.size()]};
-    it1 = (it1 + fly_zone.size() - 1) % fly_zone.size();
-
-    while(it1 != it2) {
-        std::cout << "Current area: " << current_area << std::endl;
-        std::cout << "It1: " << it1 << ", It2: " << it2 << std::endl;
-        double lower_point_x = lower_segment.second.first, upper_point_x = upper_segment.second.first;
-        std::cout << "Upper point x: " << std::setprecision(10) << upper_point_x << ", Lower point x: " << std::setprecision(10) << lower_point_x << std::endl;
-        if (upper_point_x < lower_point_x) {
-            point_t lower_intersection = segment_line_intersection(lower_segment.first, lower_segment.second,
-                                                                   {1, 0, -upper_point_x});
-            upper_points.push_back(upper_segment.second);
-            lower_points.push_back(lower_intersection);
-            current_area += polygon_from_2_segments(upper_segment, lower_segment, upper_point_x).area();
-            lower_segment.first = lower_intersection;
-            it2 = (it2 + 1) % fly_zone.size();
-            upper_segment = {upper_segment.second, fly_zone[it2]};
-        } else {
-            std::cout << "HERE" << std::endl;
-            point_t upper_intersection = segment_line_intersection(upper_segment.first, upper_segment.second, {1, 0, -lower_point_x});
-            std::cout << upper_intersection.first << ", " << upper_intersection.second << std::endl;
-
-            lower_points.push_back(lower_segment.second);
-            upper_points.push_back(upper_intersection);
-            current_area += polygon_from_2_segments(upper_segment, lower_segment, lower_point_x).area();
-            upper_segment.first = upper_intersection;
-            it1 = (it1 + fly_zone.size() - 1) % fly_zone.size();
-            lower_segment = {lower_segment.second, fly_zone[it1]};
-        }
-        if (current_area >= max_piece_area) {
-            // TODO: do some nice algebra or bin-search here to make the size of new polygon be precisely max_piece_area
-            MapPolygon new_polygon;
-            new_polygon.fly_zone_polygon_points.insert(new_polygon.fly_zone_polygon_points.end(), upper_points.begin(), upper_points.end());
-            std::reverse(lower_points.begin(), lower_points.end());
-            new_polygon.fly_zone_polygon_points.insert(new_polygon.fly_zone_polygon_points.end(), lower_points.begin(), lower_points.end());
-            new_polygon.fly_zone_polygon_points.push_back(upper_points.front());
-
-            lower_points = std::vector<point_t>{lower_segment.first};
-            upper_points = std::vector<point_t>{upper_segment.first};
-
-            res.push_back(new_polygon.rotated(-rotation_angle));
-        }
-    }
-    upper_points.push_back(fly_zone[it1]);
-    MapPolygon new_polygon;
-    new_polygon.fly_zone_polygon_points.insert(new_polygon.fly_zone_polygon_points.end(), upper_points.begin(), upper_points.end());
-    std::reverse(lower_points.begin(), lower_points.end());
-    new_polygon.fly_zone_polygon_points.insert(new_polygon.fly_zone_polygon_points.end(), lower_points.begin(), lower_points.end());
-    new_polygon.fly_zone_polygon_points.push_back(upper_points.front());
-    res.push_back(new_polygon.rotated(-rotation_angle));
-
-    return res;
-}
-
 
 double MapPolygon::area() const {
     // TODO: implement the algorithm for non-convex polygon too
@@ -359,8 +247,86 @@ void MapPolygon::make_pure_convex() {
     fly_zone_polygon_points = new_fly_zone;
 }
 
-//std::vector<MapPolygon> split_polygon(const MapPolygon &polygon,  int parts) {
-//    const void* p = reinterpret_cast<const void *>(&polygon);
-//
-//
-//}
+std::pair<MapPolygon, MapPolygon> MapPolygon::split_by_vertical_line(double x) {
+    make_pure_convex();
+    make_polygon_clockwise(fly_zone_polygon_points);
+    auto fly_zone_copy = fly_zone_polygon_points;
+    fly_zone_copy.pop_back();
+    std::vector<std::pair<double, double>> new_pol[2];
+    double rightmost_x[2] = {std::numeric_limits<double>::min(), std::numeric_limits<double>::min()};
+    int cur_pol = 0;
+
+    // Iterate through each segment, detecting crossing of the vertical line
+    for (size_t i = 0; i < fly_zone_copy.size(); ++i) {
+        size_t next = (i + 1) % fly_zone_copy.size();
+        new_pol[cur_pol].push_back(fly_zone_copy[i]);
+        if (x >= std::min(fly_zone_copy[i].first, fly_zone_copy[next].first) && x <= std::max(fly_zone_copy[i].first, fly_zone_copy[next].first)) {
+            // If vertical line is crossed - change the polygon for pushing points to and push intersection points
+            auto intersection = segment_line_intersection(fly_zone_copy[i], fly_zone_copy[next], {1, 0, -x});
+            new_pol[cur_pol].push_back(intersection);
+            cur_pol ^= 1;
+            new_pol[cur_pol].push_back(intersection);
+        }
+        for (int j = 0; j < 2; ++j) {
+            if (!new_pol[j].empty()) {
+                rightmost_x[j] = std::max(rightmost_x[j], new_pol[j].back().first);
+            }
+        }
+    }
+    new_pol[cur_pol].push_back(fly_zone_copy.back());
+    // Add starting point to make the polygon closed
+    new_pol[0].push_back(new_pol[0].front());
+    new_pol[1].push_back(new_pol[1].front());
+    std::pair<MapPolygon, MapPolygon> res;
+
+    // Place the polygon on the left to the left
+    if (rightmost_x[0] < rightmost_x[1]) {
+        res.first.fly_zone_polygon_points = new_pol[0];
+        res.second.fly_zone_polygon_points = new_pol[1];
+    } else {
+        res.first.fly_zone_polygon_points = new_pol[1];
+        res.second.fly_zone_polygon_points = new_pol[0];
+    }
+    return res;
+}
+
+
+
+
+std::vector<MapPolygon> MapPolygon::split_into_pieces(double max_piece_area) {
+    if (max_piece_area > area()) {
+        return {*this};
+    }
+    make_polygon_clockwise(fly_zone_polygon_points);
+
+    int res_polygons = std::ceil(area() / max_piece_area);
+    double split_piece_area = area() / res_polygons;
+    auto cur_polygon = *this;
+    std::vector<MapPolygon> res;
+    double rightmost_x = std::numeric_limits<double>::min(), leftmost_x = std::numeric_limits<double>::max();
+    for (const auto &p: fly_zone_polygon_points) {
+        rightmost_x = std::max(rightmost_x, p.first);
+        leftmost_x = std::min(leftmost_x, p.first);
+    }
+
+    for (int i = 0; i < res_polygons - 1; ++i) {
+        // Using bin-search find the appropriate vertical line
+        double l = leftmost_x, r = rightmost_x;
+        while (r - l > SPLIT_BIN_SEARCH_THRESH) {
+            double m = (r + l) / 2;
+            auto line_split = cur_polygon.split_by_vertical_line(m);
+            if (line_split.first.area() < split_piece_area) {
+                l = m;
+            } else {
+                r = m;
+            }
+        }
+        // Take a piece from the left and continue the algorithm
+        auto best_split = cur_polygon.split_by_vertical_line(l);
+        res.push_back(best_split.first);
+        cur_polygon = best_split.second;
+        leftmost_x = l;
+    }
+    res.push_back(cur_polygon);
+    return res;
+}

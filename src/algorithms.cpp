@@ -34,19 +34,6 @@ namespace {
             return;
         }
 
-//        std::cout << "Polygons" << std::endl;
-//        for (const auto &pol: polygons) {
-//            for (const auto &p: pol.fly_zone_polygon_points) {
-//                std::cout << p.first << ", " << p.second << std::endl;
-//            }
-//            std::cout << "----------------------------" << std::endl;
-//        }
-//        std::cout << "Adding polygon: " << std::endl;
-//        for (const auto &p: new_polygon.fly_zone_polygon_points) {
-//            std::cout << p.first << ", " << p.second << std::endl;
-//        }
-//        std::cout << "----------------------------" << std::endl;
-
         bool inserted = false;
 
         if (new_polygon.fly_zone_polygon_points.size() <= 2) {
@@ -146,6 +133,7 @@ vpdd sweeping(const MapPolygon &polygon, double angle, double sweeping_step, boo
     double current_x = leftmost_border + sweeping_step / 2;
     bool current_direction_up = start_up;
 
+    bool last_one = false;
     while (true) {
         std::set<double> intersection_ys;
         for (const auto &segment: rotated_polygon.get_all_segments()) {
@@ -158,7 +146,12 @@ vpdd sweeping(const MapPolygon &polygon, double angle, double sweeping_step, boo
             intersection_ys.insert(intersection.second);
         }
         if (intersection_ys.size() <= 1) {
-            break;
+            if (last_one) {
+                break;
+            }
+            current_x -= sweeping_step / 2;
+            last_one = true;
+            continue;
         }
         double lower_y = *intersection_ys.begin();
         double upper_y = *(++intersection_ys.begin());

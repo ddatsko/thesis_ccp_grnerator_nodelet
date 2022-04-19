@@ -49,7 +49,8 @@ double segment_length(const segment_t &segment) {
 
 bool segments_intersect(const segment_t &s1, const segment_t &s2) {
     // Consider that segments that have a common point does not intersect
-    if (s1.first == s2.first || s1.first == s2.second || s1.second == s2.first || s1.second == s2.second) {
+    if (isclose(s1.first, s2.first, 1e-5) || isclose(s1.first, s2.second, 1e-5) ||
+    isclose(s1.second, s2.first, 1e-5) || isclose(s1.second, s2.second, 1e-5)) {
         return false;
     }
 

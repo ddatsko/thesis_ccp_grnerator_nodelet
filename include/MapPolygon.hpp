@@ -11,6 +11,7 @@
 #include "custom_types.hpp"
 
 
+
 struct kml_file_parse_error: public std::runtime_error {
   using runtime_error::runtime_error;
 };
@@ -77,6 +78,13 @@ struct MapPolygon {
      * @return vector of min(n, number_of_edges) rotation angles
      */
     std::vector<double> get_n_longest_edges_rotation_angles(size_t n) const;
+
+    /*!
+     * Split fly-zone by a vertical line. If there are non-fly zones, they will be just deleted
+     * @param x X coordinate of the vertical line
+     * @return Two polygons, left one is first, right one is second
+     */
+    std::pair<MapPolygon, MapPolygon> split_by_vertical_line(double x);
 
     std::vector<MapPolygon> split_into_pieces(double max_piece_area);
 
