@@ -106,6 +106,7 @@ namespace trajectory_generatiion {
         }
 
         if (req.override_drone_parameters) {
+            std::cout << "Overriding parameters" << std::endl;
             energy_config.drone_area = req.drone_area;
             energy_config.average_acceleration = req.average_acceleration;
             energy_config.drone_mass = req.drone_mass;
@@ -141,15 +142,15 @@ namespace trajectory_generatiion {
             auto splitted = pol.split_into_pieces(req.max_polygon_area != 0 ? req.max_polygon_area : std::numeric_limits<double>::max());
             polygons_divided.insert(polygons_divided.end(), splitted.begin(), splitted.end());
 
-            std::cout << "Splitted : " << std::endl;
-            for (const auto &pol_spl: splitted) {
-                std::cout << "Polygon with area " << pol_spl.area() << std::endl;
-                for (const auto &p: pol_spl.fly_zone_polygon_points) {
-                    std::cout << p.first << ", " << p.second << std::endl;
-                }
-                std::cout << "-------------" << std::endl;
-            }
-            std::cout << "================================\n\n\n" << std::endl;
+//            std::cout << "Splitted : " << std::endl;
+//            for (const auto &pol_spl: splitted) {
+//                std::cout << "Polygon with area " << pol_spl.area() << std::endl;
+//                for (const auto &p: pol_spl.fly_zone_polygon_points) {
+//                    std::cout << p.first << ", " << p.second << std::endl;
+//                }
+//                std::cout << "-------------" << std::endl;
+//            }
+//            std::cout << "================================\n\n\n" << std::endl;
         }
         polygons_decomposed = polygons_divided;
 
@@ -160,12 +161,16 @@ namespace trajectory_generatiion {
         mstsp_solver::MstspSolver solver(solver_config, polygons_decomposed, energy_calculator,
                                          shortest_path_calculator);
 
+        std::cout << "Optimal speed: " << energy_calculator.get_optimal_speed() << std::endl;
+
         auto solver_res = solver.solve();
         res.success = true;
         res.paths_gps.resize(solver_res.size());
         res.energy_consumptions.resize(solver_res.size());
         for (size_t i = 0; i < solver_res.size(); ++i) {
             res.paths_gps[i].header.frame_id = "latlon_origin";
+            // Do not visit the starting point itself
+            solver_res[i].erase(solver_res[i].begin());
             auto generated_path =  _generate_path_for_simulation_one_drone(solver_res[i], gps_transform_origin, req.sweeping_step, energy_calculator.get_optimal_speed());
             res.paths_gps[i] = generated_path;
             res.energy_consumptions[i] = energy_calculator.calculate_path_energy_consumption(solver_res[i]);
@@ -210,6 +215,13 @@ namespace trajectory_generatiion {
         path.loop = false;
         path.override_constraints = false;
 
+        path.override_max_velocity_horizontal = optimal_speed;
+        path.override_max_acceleration_horizontal = 2;
+        path.override_max_jerk_horizontal = 40;
+        path.override_max_jerk_vertical = 40;
+        path.override_max_acceleration_vertical = 1;
+        path.override_max_velocity_vertical = optimal_speed;
+
         // TODO: find out what this parameter means
         path.relax_heading = true;
 
@@ -218,7 +230,6 @@ namespace trajectory_generatiion {
         for (auto p: points_to_visit_dense) {
             mrs_msgs::ReferenceStamped point_3d;
             point_3d.header.frame_id = "latlon_origin";
-            point_3d.reference.heading = optimal_speed;
 
             p = meters_to_gps_coordinates(p, gps_transform_origin);
             point_3d.reference.position.x = p.first;

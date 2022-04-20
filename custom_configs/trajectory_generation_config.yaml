@@ -1,5 +1,5 @@
 # execution time limiter
-max_time: 40 # [s]
+max_time: 1 # [s]
 
 # when true, only the fallback solver will be used by default
 enforce_fallback_solver: false
@@ -8,7 +8,7 @@ enforce_fallback_solver: false
 # by subsampling the original path with more waypoints
 check_trajectory_deviation:
   enabled: true
-  max_deviation: 0.05 # [m]
+  max_deviation: 0.25 # [m]
   max_iterations: 3 # [-]
 
 # allows to neglect waypoints in the original path if the new path
@@ -25,7 +25,7 @@ path_straightener:
 min_waypoint_distance: 0.05
 
 # sampling dt of the output trajectory (when the path's stamp is not frmo future, 0.2 otherwise)
-sampling_dt: 0.01 # [s]
+sampling_dt: 0.2 # [s]
 
 # while checking the final trajectory, don't allow
 # returning results which are time-wise n-times longer / shorter than

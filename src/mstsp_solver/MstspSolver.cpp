@@ -52,8 +52,6 @@ namespace mstsp_solver {
 
 
     solution_cost_t MstspSolver::get_solution_cost(const solution_t &solution) const {
-        //TODO: tune this function. We should somehow take into account both average and max energy spent by a drone
-        // For now, calculate only the sum of energies spent
         double cost_sum = 0;
         double max_path_cost = 0;
 
@@ -61,13 +59,6 @@ namespace mstsp_solver {
             double path_cost = get_path_cost(uav_path);
             cost_sum += path_cost;
             max_path_cost = std::max(max_path_cost, path_cost);
-        }
-
-        double mean = cost_sum / static_cast<double>(solution.size());
-        double variance = 0;
-        for (const auto &uav_path: solution) {
-            double path_cost = get_path_cost(uav_path);
-            variance += std::pow(path_cost - mean, 2);
         }
 
         return {max_path_cost, cost_sum};
@@ -131,8 +122,8 @@ namespace mstsp_solver {
 
     std::vector<std::vector<point_t>> MstspSolver::get_drones_paths(const solution_t &solution) const {
         std::vector<std::vector<point_t>> res;
-        for (const auto &drone_path: solution) {
-            res.push_back(get_path_from_targets(drone_path));
+        for (const auto & i : solution) {
+            res.push_back(get_path_from_targets(i));
         }
         return res;
     }
@@ -287,7 +278,7 @@ namespace mstsp_solver {
         Target target_to_move = solution[index_a1][index_c1];
         solution[index_a1].erase(solution[index_a1].begin() + static_cast<long>(index_c1));
 
-        if (generate_random_number() % 2 == 0) { // Shift intra route
+        if (generate_random_number() % 2 == 0 || solution.size() == 1) { // Shift intra route
             index_a2 = index_a1;
             do {
                 index_c2 = generate_random_number() % (solution[index_a1].size() + 1);

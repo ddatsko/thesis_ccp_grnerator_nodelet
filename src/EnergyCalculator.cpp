@@ -69,7 +69,12 @@ double EnergyCalculator::calculate_turning_energy(double angle) const {
     double energy_x = (config.drone_mass * std::pow(v_r, 2) / 2) - (config.drone_mass * std::pow(new_vx, 2) / 2);
     double energy_y = (config.drone_mass * std::pow(new_vy, 2) / 2);
 
-    return energy_x + energy_y;
+    double t_dec_x = (v_r - new_vx) / config.average_acceleration;
+    double t_acc_y = new_vy / config.average_acceleration;
+    // Assume that UAV can decelerate in one direction and accelerate in the other one at one time
+    double turning_time = std::min(t_dec_x, t_acc_y);
+
+    return energy_x + energy_y + turning_time * P_r;
 }
 
 double EnergyCalculator::calculate_straight_line_energy(double v_in, double v_out, const std::pair<double, double> &p1,
@@ -84,8 +89,9 @@ double EnergyCalculator::calculate_straight_line_energy(double v_in, double v_ou
     double s_tot = std::sqrt(std::pow(p1.first - p2.first, 2) + std::pow(p1.second - p2.second, 2));
 
     // Calculate the total power condumption by finding the time of acceleration + deceleration + constant speed movement
-    return (t_acc + t_dec + (s_tot - s_acc - s_dec) / v_r) * P_r;
+    return ((s_tot - s_acc - s_dec) / v_r) * P_r;
 }
+
 
 double EnergyCalculator::calculate_path_energy_consumption(const std::vector<std::pair<double, double>> &path) const {
     if (path.size() < 2) {
