@@ -169,11 +169,12 @@ namespace trajectory_generatiion {
         res.energy_consumptions.resize(solver_res.size());
         for (size_t i = 0; i < solver_res.size(); ++i) {
             res.paths_gps[i].header.frame_id = "latlon_origin";
+            res.energy_consumptions[i] = energy_calculator.calculate_path_energy_consumption(solver_res[i]);
             // Do not visit the starting point itself
             solver_res[i].erase(solver_res[i].begin());
             auto generated_path =  _generate_path_for_simulation_one_drone(solver_res[i], gps_transform_origin, req.sweeping_step, energy_calculator.get_optimal_speed());
             res.paths_gps[i] = generated_path;
-            res.energy_consumptions[i] = energy_calculator.calculate_path_energy_consumption(solver_res[i]);
+
         }
         return true;
     }

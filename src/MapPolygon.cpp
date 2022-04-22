@@ -273,10 +273,22 @@ std::pair<MapPolygon, MapPolygon> MapPolygon::split_by_vertical_line(double x) {
             }
         }
     }
-    new_pol[cur_pol].push_back(fly_zone_copy.back());
+//    new_pol[cur_pol].push_back(fly_zone_copy.back());
     // Add starting point to make the polygon closed
     new_pol[0].push_back(new_pol[0].front());
     new_pol[1].push_back(new_pol[1].front());
+
+    std::cout << "Splitted by vertical line " << x << std::endl;
+    std::cout << "one: " << std::endl;
+    for (const auto &p: new_pol[0]) {
+        std::cout << p.first << ", " << p.second << std::endl;
+    }
+    std::cout << "------------------\ntwo: " << std::endl;
+    for (const auto &p: new_pol[1]) {
+        std::cout << p.first << ", " << p.second << std::endl;
+    }
+    std::cout << "=====================" << std::endl;
+
     std::pair<MapPolygon, MapPolygon> res;
 
     // Place the polygon on the left to the left
@@ -287,6 +299,8 @@ std::pair<MapPolygon, MapPolygon> MapPolygon::split_by_vertical_line(double x) {
         res.first.fly_zone_polygon_points = new_pol[1];
         res.second.fly_zone_polygon_points = new_pol[0];
     }
+    std::cout << "Areas: " << res.first.area() << ", " << res.second.area() << std::endl;
+    std::cout << "Areas: " << res.first.area() << ", " << res.second.area() << std::endl;
     return res;
 }
 
@@ -299,6 +313,7 @@ std::vector<MapPolygon> MapPolygon::split_into_pieces(double max_piece_area) {
     }
     make_polygon_clockwise(fly_zone_polygon_points);
 
+    std::cout << "Polygon area: " << area() << std::endl;
     int res_polygons = std::ceil(area() / max_piece_area);
     double split_piece_area = area() / res_polygons;
     auto cur_polygon = *this;
