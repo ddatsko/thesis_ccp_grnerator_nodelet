@@ -3,7 +3,10 @@ geometry_msgs/Polygon[] no_fly_zones
 
 uint8 number_of_drones
 
-float32 sweeping_step
+float64 sweeping_step
+float64 distance_for_turning
+int32 max_number_of_extra_points
+
 uint16 drones_altitude
 float64 start_lat
 float64 start_lon

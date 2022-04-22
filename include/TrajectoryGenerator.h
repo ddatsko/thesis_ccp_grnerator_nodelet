@@ -24,7 +24,6 @@
 #include <vector>
 #include "EnergyCalculator.h"
 #include <thesis_trajectory_generator/GeneratePaths.h>
-#include <thesis_trajectory_generator/LoadPaths.h>
 #include "utils.hpp"
 
 namespace trajectory_generatiion {
@@ -74,7 +73,8 @@ namespace trajectory_generatiion {
          */
         mrs_msgs::Path _generate_path_for_simulation_one_drone(const std::vector<std::pair<double, double>> &points_to_visit,
                                                                point_t gps_transform_origin,
-                                                               double max_distance_between_points = std::numeric_limits<double>::max(),
+                                                               double distance_for_turning = std::numeric_limits<double>::max(),
+                                                               int max_number_of_extra_points = 0,
                                                                double optimal_speed=1);
     };
 //}

@@ -106,7 +106,7 @@ namespace trajectory_generatiion {
         }
 
         if (req.override_drone_parameters) {
-            std::cout << "Overriding parameters" << std::endl;
+            ROS_INFO("Overriding UAV parameters");
             energy_config.drone_area = req.drone_area;
             energy_config.average_acceleration = req.average_acceleration;
             energy_config.drone_mass = req.drone_mass;
@@ -141,16 +141,6 @@ namespace trajectory_generatiion {
 
             auto splitted = pol.split_into_pieces(req.max_polygon_area != 0 ? req.max_polygon_area : std::numeric_limits<double>::max());
             polygons_divided.insert(polygons_divided.end(), splitted.begin(), splitted.end());
-
-//            std::cout << "Splitted : " << std::endl;
-//            for (const auto &pol_spl: splitted) {
-//                std::cout << "Polygon with area " << pol_spl.area() << std::endl;
-//                for (const auto &p: pol_spl.fly_zone_polygon_points) {
-//                    std::cout << p.first << ", " << p.second << std::endl;
-//                }
-//                std::cout << "-------------" << std::endl;
-//            }
-//            std::cout << "================================\n\n\n" << std::endl;
         }
         polygons_decomposed = polygons_divided;
 
@@ -172,7 +162,7 @@ namespace trajectory_generatiion {
             res.energy_consumptions[i] = energy_calculator.calculate_path_energy_consumption(solver_res[i]);
             // Do not visit the starting point itself
             solver_res[i].erase(solver_res[i].begin());
-            auto generated_path =  _generate_path_for_simulation_one_drone(solver_res[i], gps_transform_origin, req.sweeping_step, energy_calculator.get_optimal_speed());
+            auto generated_path =  _generate_path_for_simulation_one_drone(solver_res[i], gps_transform_origin, req.distance_for_turning, req.max_number_of_extra_points, energy_calculator.get_optimal_speed());
             res.paths_gps[i] = generated_path;
 
         }
@@ -183,7 +173,8 @@ namespace trajectory_generatiion {
     mrs_msgs::Path TrajectoryGenerator::_generate_path_for_simulation_one_drone(
             const std::vector<std::pair<double, double>> &points_to_visit,
             point_t gps_transform_origin,
-            double max_distance_between_points,
+            double distance_for_turning,
+            int max_number_of_extra_points,
             double optimal_speed) {
         mrs_msgs::Path path;
         if (not m_simulation || points_to_visit.empty()) {
@@ -195,14 +186,14 @@ namespace trajectory_generatiion {
         points_to_visit_dense.push_back(points_to_visit.front());
         for (size_t i = 1; i < points_to_visit.size(); ++i) {
             double distance = distance_between_points(points_to_visit[i - 1], points_to_visit[i]);
-            int new_points_in_segment = std::ceil(std::max(0.0, distance / max_distance_between_points - 1));
-            double dx = (points_to_visit[i].first - points_to_visit[i - 1].first) / (new_points_in_segment + 1);
-            double dy = (points_to_visit[i].second - points_to_visit[i - 1].second) / (new_points_in_segment + 1);
-
-            for (int j = 1; j < new_points_in_segment + 2; ++j) {
-                points_to_visit_dense.emplace_back(points_to_visit[i - 1].first + dx * j,
-                                                   points_to_visit[i - 1].second + dy * j);
+            int extra_points_fit = std::floor(distance / distance_for_turning);
+            // Add one point before the second point in segment to prevent yawing during the whole segment and constrain it only
+            // to the last "distance_for_turning" meters
+            for (int j = std::min(extra_points_fit, max_number_of_extra_points); j > 0; --j) {
+                points_to_visit_dense.emplace_back(points_to_visit[i].first - j * (points_to_visit[i].first - points_to_visit[i - 1].first) / (distance / distance_for_turning),
+                                                   points_to_visit[i].second - j * (points_to_visit[i].second - points_to_visit[i - 1].second) / (distance / distance_for_turning));
             }
+            points_to_visit_dense.push_back(points_to_visit[i]);
         }
 
         // Set the parameters for trajectory generation
@@ -211,20 +202,20 @@ namespace trajectory_generatiion {
         path.header.frame_id = "latlon_origin";
 
         path.fly_now = true;
-        path.use_heading = false;
+        path.use_heading = true;
         path.stop_at_waypoints = false;
         path.loop = false;
         path.override_constraints = false;
 
         path.override_max_velocity_horizontal = optimal_speed;
-        path.override_max_acceleration_horizontal = 2;
-        path.override_max_jerk_horizontal = 40;
-        path.override_max_jerk_vertical = 40;
+        path.override_max_acceleration_horizontal = 5;
+        path.override_max_jerk_horizontal = 360;
+        path.override_max_jerk_vertical = 360;
         path.override_max_acceleration_vertical = 1;
         path.override_max_velocity_vertical = optimal_speed;
 
         // TODO: find out what this parameter means
-        path.relax_heading = true;
+        path.relax_heading = false;
 
         std::vector<mrs_msgs::Reference> points;
 
