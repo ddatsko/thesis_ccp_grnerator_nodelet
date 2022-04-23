@@ -154,6 +154,11 @@ namespace trajectory_generatiion {
         std::cout << "Optimal speed: " << energy_calculator.get_optimal_speed() << std::endl;
 
         auto solver_res = solver.solve();
+        // Modify the finishing coordinate to prevent drones from collision at the end
+        for (size_t i = 0; i < solver_res.size(); ++i) {
+            solver_res[i].back().first += static_cast<double>(i) * 3;
+        }
+
         res.success = true;
         res.paths_gps.resize(solver_res.size());
         res.energy_consumptions.resize(solver_res.size());
@@ -164,8 +169,9 @@ namespace trajectory_generatiion {
             solver_res[i].erase(solver_res[i].begin());
             auto generated_path =  _generate_path_for_simulation_one_drone(solver_res[i], gps_transform_origin, req.distance_for_turning, req.max_number_of_extra_points, energy_calculator.get_optimal_speed());
             res.paths_gps[i] = generated_path;
-
         }
+
+
         return true;
     }
 
