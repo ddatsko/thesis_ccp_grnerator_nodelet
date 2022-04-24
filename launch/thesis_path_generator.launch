@@ -9,7 +9,7 @@
   <arg name="SIMULATION_START_LAT" default="49.541502"/>
   <arg name="SIMULATION_START_LONG" default="15.348656"/>
   <arg name="ALTITUDE" default="6.0"/>
-  <arg name="ENERGY_MODEL_CONFIG_FILE" default = "$(find thesis_trajectory_generator)/custom_configs/energy_model_config.yaml"/>
+  <arg name="ENERGY_MODEL_CONFIG_FILE" default = "$(find thesis_path_generator)/custom_configs/energy_model_config.yaml"/>
 
   <!-- set to false if the nodelet should run under an external nodelet manager -->
   <arg name="standalone" default="true" />
@@ -23,7 +23,7 @@
   <arg     if="$(arg debug)" name="launch_prefix_debug" value="debug_roslaunch"/>
 
   <!-- will it run as standalone nodelet or using a nodelet manager? -->
-  <arg name="manager" default="$(arg UAV_NAME)_thesis_trajectory_generator_manager" />
+  <arg name="manager" default="$(arg UAV_NAME)_thesis_path_generator_manager" />
   <arg     if="$(arg standalone)" name="nodelet" value="standalone"/>
   <arg unless="$(arg standalone)" name="nodelet" value="load"/>
   <arg     if="$(arg standalone)" name="nodelet_manager" value=""/>
@@ -33,7 +33,7 @@
   <group ns="$(arg UAV_NAME)">
 
     <!-- TrajectoryGenerator nodelet -->
-    <node pkg="nodelet" type="nodelet" name="trajectory_generatiion" args="$(arg nodelet) trajectory_generatiion/TrajectoryGenerator $(arg nodelet_manager)" launch-prefix="$(arg launch_prefix_debug)" output="screen">
+    <node pkg="nodelet" type="nodelet" name="path_generation" args="$(arg nodelet) path_generation/PathGenerator $(arg nodelet_manager)" launch-prefix="$(arg launch_prefix_debug)" output="screen">
 
       <!-- Parameters loaded from launch file -->
       <param name="gui" type="bool" value="$(arg gui)"/>
@@ -47,7 +47,7 @@
 
 
       <!-- ROS parameters config file -->
-      <rosparam file="$(find thesis_trajectory_generator)/config/$(arg RUN_TYPE).yaml" />
+      <rosparam file="$(find thesis_path_generator)/config/$(arg RUN_TYPE).yaml" />
       <rosparam if="$(eval not arg('custom_config') == '')" file="$(arg custom_config)" />
       <rosparam file="$(arg ENERGY_MODEL_CONFIG_FILE)" />
 

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.1.2)
-project(thesis_trajectory_generator)
+project(thesis_path_generator)
 
-set(FILESNAME TrajectoryGenerator)
+set(FILESNAME PathGenerator)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

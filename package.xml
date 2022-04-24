@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="2">
 
-  <name>thesis_trajectory_generator</name>
+  <name>thesis_path_generator</name>
   <version>1.0.0</version>
   <description>more_desctription</description>
 

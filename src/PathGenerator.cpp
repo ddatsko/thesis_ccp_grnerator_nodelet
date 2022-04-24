@@ -1,4 +1,4 @@
-#include <TrajectoryGenerator.h>
+#include <PathGenerator.h>
 
 /* every nodelet must include macros which export the class as a nodelet plugin */
 #include <pluginlib/class_list_macros.h>
@@ -14,12 +14,12 @@
 #include "mstsp_solver/SolverConfig.h"
 #include "mstsp_solver/MstspSolver.h"
 
-#include <thesis_trajectory_generator/GeneratePaths.h>
+#include <thesis_path_generator/GeneratePaths.h>
 
-namespace trajectory_generatiion {
+namespace path_generation {
 
 /* onInit() method //{ */
-    void TrajectoryGenerator::onInit() {
+    void PathGenerator::onInit() {
 
         // | ---------------- set my booleans to false ---------------- |
         // but remember, always set them to their default value in the header file
@@ -33,9 +33,8 @@ namespace trajectory_generatiion {
 
         // | ------------------- load ros parameters ------------------ |<<6
         /* (mrs_lib implementation checks whether the parameter was loaded or not) */
-        mrs_lib::ParamLoader pl(nh, "TrajectoryGenerator");
+        mrs_lib::ParamLoader pl(nh, "PathGenerator");
 
-        pl.loadParam("SIMULATION", m_simulation);
         pl.loadParam("battery_model/cell_capacity", m_energy_config.battery_model.cell_capacity);
         pl.loadParam("battery_model/number_of_cells", m_energy_config.battery_model.number_of_cells);
         pl.loadParam("battery_model/d0", m_energy_config.battery_model.d0);
@@ -53,31 +52,26 @@ namespace trajectory_generatiion {
         pl.loadParam("number_of_propellers", m_energy_config.number_of_propellers);
 
         if (!pl.loadedSuccessfully()) {
-            ROS_ERROR("[TrajectoryGenerator]: failed to load non-optional parameters!");
+            ROS_ERROR("[PathGenerator]: failed to load non-optional parameters!");
             ros::shutdown();
             return;
         } else {
-            ROS_INFO_ONCE("[TrajectoryGenerator]: loaded parameters");
+            ROS_INFO_ONCE("[PathGenerator]: loaded parameters");
         }
         // | ---------------- some data post-processing --------------- |
-
-        m_trajectory_generator_service_client = nh.serviceClient<mrs_msgs::PathSrv>(
-                "/" + m_uav_name + "/path_to_follow");
-
         m_generate_paths_service_server = nh.advertiseService("/generate_paths",
-                                                              &TrajectoryGenerator::callback_generate_paths, this);
+                                                              &PathGenerator::callback_generate_paths, this);
 
 
-        ROS_INFO_ONCE("[TrajectoryGenerator]: initialized");
+        ROS_INFO_ONCE("[PathGenerator]: initialized");
 
         m_is_initialized = true;
-
     }
 
 
 
-    bool TrajectoryGenerator::callback_generate_paths(thesis_trajectory_generator::GeneratePaths::Request &req,
-                                                      thesis_trajectory_generator::GeneratePaths::Response &res) {
+    bool PathGenerator::callback_generate_paths(thesis_path_generator::GeneratePaths::Request &req,
+                                                thesis_path_generator::GeneratePaths::Response &res) {
 
         if (!m_is_initialized) return false;
         res.success = false;
@@ -106,7 +100,7 @@ namespace trajectory_generatiion {
         }
 
         if (req.override_drone_parameters) {
-            ROS_INFO("Overriding UAV parameters");
+            ROS_INFO("[PathGenerator] Overriding UAV parameters");
             energy_config.drone_area = req.drone_area;
             energy_config.average_acceleration = req.average_acceleration;
             energy_config.drone_mass = req.drone_mass;
@@ -123,7 +117,7 @@ namespace trajectory_generatiion {
         try {
             polygons_decomposed = trapezoidal_decomposition(polygon, BOUSTROPHEDON_WITH_CONVEX_POLYGONS);
         } catch (const polygon_decomposition_error &e) {
-            ROS_ERROR("Error while decomposing the polygon");
+            ROS_ERROR("[PathGenerator]: Error while decomposing the polygon");
             res.success = false;
             res.message = "Error while decomposing the polygon";
             return true;
@@ -134,10 +128,6 @@ namespace trajectory_generatiion {
 
         std::vector<MapPolygon> polygons_divided;
         for (auto &pol: polygons_decomposed) {
-            std::cout << "Polygon: " << std::endl;
-            for (const auto &p: pol.fly_zone_polygon_points) {
-                std::cout << p.first << ", " << p.second << std::endl;
-            }
 
             auto splitted = pol.split_into_pieces(req.max_polygon_area != 0 ? req.max_polygon_area : std::numeric_limits<double>::max());
             polygons_divided.insert(polygons_divided.end(), splitted.begin(), splitted.end());
@@ -151,7 +141,7 @@ namespace trajectory_generatiion {
         mstsp_solver::MstspSolver solver(solver_config, polygons_decomposed, energy_calculator,
                                          shortest_path_calculator);
 
-        std::cout << "Optimal speed: " << energy_calculator.get_optimal_speed() << std::endl;
+        ROS_INFO_STREAM("[PathGenerator]: Optimal speed: " << energy_calculator.get_optimal_speed());
 
         auto solver_res = solver.solve();
         // Modify the finishing coordinate to prevent drones from collision at the end
@@ -165,28 +155,25 @@ namespace trajectory_generatiion {
         for (size_t i = 0; i < solver_res.size(); ++i) {
             res.paths_gps[i].header.frame_id = "latlon_origin";
             res.energy_consumptions[i] = energy_calculator.calculate_path_energy_consumption(solver_res[i]);
-            // Do not visit the starting point itself
-            solver_res[i].erase(solver_res[i].begin());
+
             auto generated_path =  _generate_path_for_simulation_one_drone(solver_res[i], gps_transform_origin, req.distance_for_turning, req.max_number_of_extra_points, energy_calculator.get_optimal_speed());
+            // Do not visit the starting point sitself
+            if (!generated_path.points.empty()) {
+                generated_path.points.erase(generated_path.points.begin());
+            }
             res.paths_gps[i] = generated_path;
         }
-
-
         return true;
     }
 
 
-    mrs_msgs::Path TrajectoryGenerator::_generate_path_for_simulation_one_drone(
+    mrs_msgs::Path PathGenerator::_generate_path_for_simulation_one_drone(
             const std::vector<std::pair<double, double>> &points_to_visit,
             point_t gps_transform_origin,
             double distance_for_turning,
             int max_number_of_extra_points,
             double optimal_speed) {
         mrs_msgs::Path path;
-        if (not m_simulation || points_to_visit.empty()) {
-            // Return an empty message if the algorithm is running not for a simulation
-            return path;
-        }
 
         std::vector<std::pair<double, double>> points_to_visit_dense;
         points_to_visit_dense.push_back(points_to_visit.front());
@@ -243,4 +230,4 @@ namespace trajectory_generatiion {
 }  // namespace trajectory_generatiion
 
 /* every nodelet must export its class as nodelet plugin */
-PLUGINLIB_EXPORT_CLASS(trajectory_generatiion::TrajectoryGenerator, nodelet::Nodelet)
+PLUGINLIB_EXPORT_CLASS(path_generation::PathGenerator, nodelet::Nodelet)

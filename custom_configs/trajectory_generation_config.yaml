@@ -1,5 +1,5 @@
 # execution time limiter
-max_time: 30 # [s]
+max_time: 180 # [s]
 
 # when true, only the fallback solver will be used by default
 enforce_fallback_solver: false

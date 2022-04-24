@@ -23,13 +23,13 @@
 #include <std_msgs/String.h>
 #include <vector>
 #include "EnergyCalculator.h"
-#include <thesis_trajectory_generator/GeneratePaths.h>
+#include <thesis_path_generator/GeneratePaths.h>
 #include "utils.hpp"
 
-namespace trajectory_generatiion {
+namespace path_generation {
 
 /* class TrajectoryGenerator //{ */
-    class TrajectoryGenerator : public nodelet::Nodelet {
+    class PathGenerator : public nodelet::Nodelet {
 
     public:
         /* onInit() is called when nodelet is launched (similar to main() in regular node) */
@@ -40,11 +40,6 @@ namespace trajectory_generatiion {
         bool m_is_initialized = false;
 
         /* ros parameters */
-        std::string m_uav_name;
-        std::string m_kml_file_path;
-        bool m_simulation;
-        double m_simulation_start_lat;
-        double m_simulation_start_long;
         double m_drones_altitude;
         energy_calculator_config_t m_energy_config;
 
@@ -53,15 +48,11 @@ namespace trajectory_generatiion {
 
         // | --------------------- MRS transformer -------------------- |
 
-        mrs_lib::Transformer m_transformer;
-
         // | ---------------------- msg callbacks --------------------- |
-      
 
-        ros::ServiceClient m_trajectory_generator_service_client;
 
         ros::ServiceServer m_generate_paths_service_server;
-        bool callback_generate_paths(thesis_trajectory_generator::GeneratePaths::Request &req, thesis_trajectory_generator::GeneratePaths::Response &res);
+        bool callback_generate_paths(thesis_path_generator::GeneratePaths::Request &req, thesis_path_generator::GeneratePaths::Response &res);
 
 
         /*!
