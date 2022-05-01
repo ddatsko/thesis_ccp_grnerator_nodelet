@@ -79,17 +79,33 @@ double EnergyCalculator::calculate_turning_energy(double angle) const {
 
 double EnergyCalculator::calculate_straight_line_energy(double v_in, double v_out, const std::pair<double, double> &p1,
                                                         const std::pair<double, double> &p2) const {
-    // Calculate the time and distance travelled during the acceleration and deceleration phases
-    double t_acc = (v_r - v_in) / config.average_acceleration;
+        // Calculate the time and distance travelled during the acceleration and deceleration phases
+    double t_acc = std::abs(v_r - v_in) / config.average_acceleration;
     double s_acc = v_in * t_acc + 0.5 * config.average_acceleration * std::pow(t_acc, 2);
-    double t_dec = (v_r - v_out) / config.average_acceleration;
+    double t_dec = std::abs(v_r - v_out) / config.average_acceleration;
     double s_dec = v_r * t_dec + 0.5 * config.average_acceleration * std::pow(t_dec, 2);
 
     // Calculate the total distance between two points
     double s_tot = std::sqrt(std::pow(p1.first - p2.first, 2) + std::pow(p1.second - p2.second, 2));
 
-    // Calculate the total power condumption by finding the time of acceleration + deceleration + constant speed movement
-    return (t_acc + t_dec + (s_tot - s_acc - s_dec) / v_r) * P_r;
+    // TODO: remove abs here
+    double t_acc_in_out = (v_in - v_out) / config.average_acceleration;
+    double s_acc_in_out = v_in * t_acc_in_out + 0.5 * config.average_acceleration * std::pow(t_acc_in_out, 2);
+    std::cout << s_acc_in_out << ", " << t_acc_in_out << std::endl;
+
+//    std::cout << "Distance between points: " << s_tot << std::endl;
+//    std::cout << "Pam" << std::endl;
+//    return (t_acc + t_dec + std::abs(s_tot - s_acc - s_dec) / v_r) * P_r;
+    if (s_acc + s_dec <= s_tot) {
+        return (t_acc + t_dec + (s_tot - s_acc - s_dec) / v_r) * P_r;
+    } else if (s_acc >= s_tot && s_dec >= s_tot) {
+        return std::abs(v_out - v_in) / config.average_acceleration;
+    } else {
+        auto v_min = std::min(v_in, v_out), v_max = std::max(v_in, v_out);
+        auto t_reaching_same = (v_max - v_min) / config.average_acceleration;
+        auto s_reaching_same = v_min * t_reaching_same + 0.5 * config.average_acceleration * t_reaching_same * t_reaching_same;
+        return std::abs(s_tot - s_reaching_same) / v_max;
+    }
 }
 
 

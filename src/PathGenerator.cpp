@@ -182,7 +182,7 @@ namespace path_generation {
             int extra_points_fit = std::floor(distance / distance_for_turning);
             // Add one point before the second point in segment to prevent yawing during the whole segment and constrain it only
             // to the last "distance_for_turning" meters
-            for (int j = std::min(extra_points_fit, max_number_of_extra_points); j > 0; --j) {
+            for (int j = std::min(extra_points_fit - 1, max_number_of_extra_points); j > 0; --j) {
                 points_to_visit_dense.emplace_back(points_to_visit[i].first - j * (points_to_visit[i].first - points_to_visit[i - 1].first) / (distance / distance_for_turning),
                                                    points_to_visit[i].second - j * (points_to_visit[i].second - points_to_visit[i - 1].second) / (distance / distance_for_turning));
             }
@@ -201,10 +201,10 @@ namespace path_generation {
         path.override_constraints = false;
 
         path.override_max_velocity_horizontal = optimal_speed;
-        path.override_max_acceleration_horizontal = 5;
-        path.override_max_jerk_horizontal = 360;
-        path.override_max_jerk_vertical = 360;
-        path.override_max_acceleration_vertical = 1;
+        path.override_max_acceleration_horizontal = 4;
+        path.override_max_jerk_horizontal = 200;
+        path.override_max_jerk_vertical = 200;
+        path.override_max_acceleration_vertical = 4;
         path.override_max_velocity_vertical = optimal_speed;
 
         // TODO: find out what this parameter means

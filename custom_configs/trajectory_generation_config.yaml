@@ -17,7 +17,7 @@ check_trajectory_deviation:
 # trajectory generator to work with.
 path_straightener:
   enabled: false
-  max_deviation: 0.1 # [m]
+  max_deviation: 0.3 # [m]
   max_hdg_deviation: 0.1 # [rad]
 
 # waypoints too close to each other cause issues in the optimization
