@@ -50,6 +50,7 @@ namespace path_generation {
         pl.loadParam("average_acceleration", m_energy_config.average_acceleration);
         pl.loadParam("propeller_radius", m_energy_config.propeller_radius);
         pl.loadParam("number_of_propellers", m_energy_config.number_of_propellers);
+        pl.loadParam("allowed_path_deviation", m_energy_config.allowed_path_deviation);
 
         if (!pl.loadedSuccessfully()) {
             ROS_ERROR("[PathGenerator]: failed to load non-optional parameters!");
@@ -201,7 +202,7 @@ namespace path_generation {
         path.override_constraints = false;
 
         path.override_max_velocity_horizontal = optimal_speed;
-        path.override_max_acceleration_horizontal = 4;
+        path.override_max_acceleration_horizontal = 2;
         path.override_max_jerk_horizontal = 200;
         path.override_max_jerk_vertical = 200;
         path.override_max_acceleration_vertical = 4;

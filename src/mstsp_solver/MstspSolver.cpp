@@ -37,15 +37,20 @@ namespace mstsp_solver {
 
         for (size_t i = 0; i + 1 < path.size(); ++i) {
             energy += path[i].energy_consumption;
-            energy += m_energy_calculator.calculate_straight_line_energy(0, 0, path[i].end_point,
+            energy += m_energy_calculator.calculate_straight_line_energy(0,
+                                                                         m_energy_calculator.get_average_acceleration(),
+                                                                         0,
+                                                                         m_energy_calculator.get_average_acceleration(),
+                                                                         path[i].end_point,
                                                                          path[i + 1].starting_point);
             // TODO: think if really the shortest path calculation is needed. It works at least in O(N^2) but with caching.
 //            auto path_between_polygons = m_shortest_path_calculator.shortest_path_between_points(path[i].end_point, path[i + 1].starting_point);
 //            energy += m_energy_calculator.calculate_path_energy_consumption(path_between_polygons);
         }
         energy += path[path.size() - 1].energy_consumption;
-        energy += m_energy_calculator.calculate_straight_line_energy(0, 0, m_config.starting_point, path[0].starting_point);
-        energy += m_energy_calculator.calculate_straight_line_energy(0, 0, path[path.size() - 1].end_point, m_config.starting_point);
+        auto a = m_energy_calculator.get_average_acceleration();
+        energy += m_energy_calculator.calculate_straight_line_energy(0, a, 0, a, m_config.starting_point, path[0].starting_point);
+        energy += m_energy_calculator.calculate_straight_line_energy(0, a, 0, a, path[path.size() - 1].end_point, m_config.starting_point);
 
         return energy;
     }

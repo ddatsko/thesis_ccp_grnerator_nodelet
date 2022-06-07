@@ -28,6 +28,14 @@ struct best_speed_model_t {
 };
 
 
+struct turning_properties_t {
+    double v_before;
+    double a_before;
+    double v_after;
+    double a_after;
+    double energy;
+};
+
 /*! 
  * Structure with pre-calculated constants for the accurate calculation of the energy consumption 
  * */
@@ -39,6 +47,7 @@ struct energy_calculator_config_t {
   double average_acceleration; // [m/s^2]
   double propeller_radius; // [m]
   int number_of_propellers;
+  double allowed_path_deviation;
 };
     
 
@@ -58,29 +67,43 @@ private:
    * @param p3: coordinates of the third point
    * @return The angle in radians in range (0..PI)
    */
-  double angle_between_points(std::pair<double, double> p0, std::pair<double, double> p1, std::pair<double, double> p2) const;
+  [[nodiscard]] double angle_between_points(std::pair<double, double> p0, std::pair<double, double> p1, std::pair<double, double> p2) const;
   
   /*!
    * Calculate the energy spent on turning manuver including the deceleration and acceleration
    *
    * @param angle Turning angle [rad]
-   * @return Consumped energy in Joules
+   * @return Properties of the turn by angle
    */
-  double calculate_turning_energy(double angle) const;
+  [[nodiscard]] turning_properties_t calculate_turning_properties(double angle) const;
 
 public:
   /*! 
    * Calculate the energy for moving on the straight line. The acceleration and deceleration times are encountered, but the 
    * energy needed to perform the acceleration of deceleration is not encountered (as it should be 
-   * enocuntered in the calculate_turning_energy method)
+   * encountered in the calculate_turning_energy method)
    *
    * @param v_in The speed of the drone while entering the path segment
+   * @param a_in Acceleration at the beginning of the segment
    * @param v_out The speed of the drone while leaving the path segment
+   * @param a_out Acceleration (deceleration) at the end of the segment. Negative value always
    * @param p1 Start point of the path segment
    * @param p2 End poinr of the path segment
    * @return Energy consumption in Joules
-   */ 
-  double calculate_straight_line_energy(double v_in, double v_out, const std::pair<double, double> &p1, const std::pair<double, double> &p2) const;
+   */
+  [[nodiscard]] double calculate_straight_line_energy(double v_in, double a_in, double v_out, double a_out, const std::pair<double, double> &p1,
+                                 const std::pair<double, double> &p2) const;
+
+    /*!
+   * Get the energy spent on traversing a short lin, on which the optimal speed cannot be reached
+   * @param v_in Speed of the UAV whole entering the segment
+   * @param a_in Acceleration of the UAV
+   * @param v_out Speed of the UAV wile leaving the segment
+   * @param a_out Deceleration of UAV (negative value)
+   * @param s Distance of the segment
+   * @return Amount of energy spent to accelerate, and drop speed back to v_out moving only s meters
+   */
+  [[nodiscard]] double calculate_short_line_energy(double v_in, double a_in, double v_out, double a_out, double s) const;
 
   explicit EnergyCalculator(const energy_calculator_config_t &energy_calculator_config);
   EnergyCalculator() = delete;
@@ -94,6 +117,10 @@ public:
    * @return The amount of spent energy to follow the whole path in Joules [J]
    */
   double calculate_path_energy_consumption(const std::vector<std::pair<double, double>> &path) const;
+
+  double get_average_acceleration() const {
+      return config.average_acceleration;
+  }
 
 };
 

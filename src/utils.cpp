@@ -182,3 +182,15 @@ point_t meters_to_gps_coordinates(point_t p, point_t origin) {
     const double meters_in_long_degree = std::cos((origin.first / 180.0) * M_PI) * METERS_IN_DEGREE;
     return {(p.second + origin.first * METERS_IN_DEGREE) / METERS_IN_DEGREE, (p.first + origin.second * meters_in_long_degree) / meters_in_long_degree};
 }
+
+
+std::pair<double, double> solve_quadratic(double a, double b, double c) {
+    if (a == 0) {
+        return {-c / b, -c / b};
+    }
+    double d = b * b - 4 * a * c;
+    if (d < 0) {
+        return {FP_NAN, FP_NAN};
+    }
+    return {(-b + std::sqrt(d)) / (2 * a), (-b - std::sqrt(d)) / (2 * a)};
+}

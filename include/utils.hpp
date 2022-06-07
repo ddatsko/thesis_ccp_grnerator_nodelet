@@ -77,5 +77,7 @@ inline bool isclose<point_t>(point_t p1, point_t p2, double eps) {
     return isclose(p1.first, p2.first, eps) && isclose(p1.second, p2.second, eps);
 }
 
+std::pair<double, double> solve_quadratic(double a, double b, double c);
+
 #endif
 
