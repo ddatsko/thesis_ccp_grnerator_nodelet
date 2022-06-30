@@ -171,9 +171,15 @@ vpdd sweeping(const MapPolygon &polygon, double angle, double sweeping_step, boo
         current_x += sweeping_step;
     }
 
-    //TODO: find out what ro do in the situation when the polygon is so thin, that we cannot do any sweeping. For now -- just add one
+    //TODO: find out what to do in the situation when the polygon is so thin, that we cannot do any sweeping. For now -- just add one point
     if (res_path.empty()) {
-        res_path.push_back(rotated_polygon.fly_zone_polygon_points[0]);
+        double sum_x = 0.0;
+        double sum_y = 0.0;
+        for (const auto&[x, y]: polygon.fly_zone_polygon_points) {
+            sum_x += x;
+            sum_y += y;
+        }
+        res_path.push_back({sum_x / polygon.fly_zone_polygon_points.size(), sum_y / polygon.fly_zone_polygon_points.size()});
     }
 
     std::for_each(res_path.begin(), res_path.end(), [angle](auto &p){p = rotate_point(p, -angle);});

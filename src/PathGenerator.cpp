@@ -124,6 +124,16 @@ namespace path_generation {
             return true;
         }
 
+        ROS_INFO_STREAM("[PathGenerator]: Polygon decomposed. Decomposed polygons: ");
+        for (const auto &p: polygons_decomposed) {
+            ROS_INFO_STREAM("[PathGenerator] Polygon points: ");
+            for (const auto &point: p.fly_zone_polygon_points) {
+                ROS_INFO_STREAM("(" << point.first << ", " << point.second << "), ");
+            }
+
+            ROS_INFO_STREAM("\n[PathGenerator] Decomposed sub polygon area: " << p.area());
+        }
+
         std::for_each(polygons_decomposed.begin(), polygons_decomposed.end(), [&](MapPolygon &p){p = p.rotated(-req.decomposition_rotation);});
         polygon = polygon.rotated(-req.decomposition_rotation);
 
@@ -145,6 +155,8 @@ namespace path_generation {
         ROS_INFO_STREAM("[PathGenerator]: Optimal speed: " << energy_calculator.get_optimal_speed());
 
         auto solver_res = solver.solve();
+
+
         // Modify the finishing coordinate to prevent drones from collision at the end
         for (size_t i = 0; i < solver_res.size(); ++i) {
             solver_res[i].back().first += static_cast<double>(i) * 3;
@@ -158,10 +170,7 @@ namespace path_generation {
             res.energy_consumptions[i] = energy_calculator.calculate_path_energy_consumption(solver_res[i]);
 
             auto generated_path =  _generate_path_for_simulation_one_drone(solver_res[i], gps_transform_origin, req.distance_for_turning, req.max_number_of_extra_points, energy_calculator.get_optimal_speed());
-            // Do not visit the starting point sitself
-            if (!generated_path.points.empty()) {
-                generated_path.points.erase(generated_path.points.begin());
-            }
+
             res.paths_gps[i] = generated_path;
         }
         return true;

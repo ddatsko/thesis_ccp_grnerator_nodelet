@@ -10,7 +10,7 @@
 #include <iomanip>
 
 namespace {
-    const double EPS = 1e-7;
+    const double EPS = 1e-5;
 
     point_t pm(point_t point) {
         return {point.first * 1000, point.second * 1000};
@@ -262,10 +262,4 @@ bool ShortestPathCalculator::point_can_see_point(point_t p1, point_t p2) const{
     }
     return true;
 }
-
-
-
-
-
-
 

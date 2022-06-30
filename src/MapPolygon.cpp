@@ -7,12 +7,13 @@
 #include <ros/ros.h>
 #include "algorithms.hpp"
 
-//TODO: make most of methods external functions (maybe, working on not MapPolygons byt ust on vector<pair<double, double>>
+// TODO: make most of methods external functions (maybe, working on not MapPolygons but just on vector<pair<double, double>>
+// TODO: make use of some external polygons library like
 namespace {
     const std::string FLY_ZONE_PLACEMARK_NAME = "fly-zone";
     const std::string NO_FLY_ZONE_PLACEMARK_NAME = "no-fly-zone";
 
-    const double SPLIT_BIN_SEARCH_THRESH = 1e-5;
+    const double SPLIT_BIN_SEARCH_THRESH = 1e-3;
 
     point_t string_to_point(const std::string &point_string) {
         size_t coma_pos;
@@ -220,16 +221,12 @@ std::vector<double> MapPolygon::get_n_longest_edges_rotation_angles(size_t n) co
 
 
 double MapPolygon::area() const {
-    // TODO: implement the algorithm for non-convex polygon too
-    if (!polygon_convex(this->fly_zone_polygon_points)) {
-        throw std::runtime_error("THe algorithm cannot calculate the area of non convex polygon still");
-    }
     double whole_area = 0;
     for (size_t i = 1; i < fly_zone_polygon_points.size(); ++i) {
         whole_area += (fly_zone_polygon_points[i - 1].first + fly_zone_polygon_points[i].first) *
                 (fly_zone_polygon_points[i - 1].second - fly_zone_polygon_points[i].second);
     }
-    return whole_area;
+    return std::abs(whole_area / 2);
 }
 
 void MapPolygon::make_pure_convex() {
@@ -247,30 +244,34 @@ void MapPolygon::make_pure_convex() {
     fly_zone_polygon_points = new_fly_zone;
 }
 
+
 std::pair<MapPolygon, MapPolygon> MapPolygon::split_by_vertical_line(double x) {
     make_pure_convex();
     make_polygon_clockwise(fly_zone_polygon_points);
     auto fly_zone_copy = fly_zone_polygon_points;
-    fly_zone_copy.pop_back();
     std::vector<std::pair<double, double>> new_pol[2];
     double rightmost_x[2] = {std::numeric_limits<double>::min(), std::numeric_limits<double>::min()};
-    int cur_pol = 0;
+
 
     // Iterate through each segment, detecting crossing of the vertical line
-    for (size_t i = 0; i < fly_zone_copy.size(); ++i) {
-        size_t next = (i + 1) % fly_zone_copy.size();
-        new_pol[cur_pol].push_back(fly_zone_copy[i]);
-        if (x >= std::min(fly_zone_copy[i].first, fly_zone_copy[next].first) && x <= std::max(fly_zone_copy[i].first, fly_zone_copy[next].first)) {
-            // If vertical line is crossed - change the polygon for pushing points to and push intersection points
-            auto intersection = segment_line_intersection(fly_zone_copy[i], fly_zone_copy[next], {1, 0, -x});
-            new_pol[cur_pol].push_back(intersection);
-            cur_pol ^= 1;
-            new_pol[cur_pol].push_back(intersection);
+    for (size_t i = 0; i + 1 < fly_zone_copy.size(); ++i) {
+        if (fly_zone_copy[i].first == x) {
+            new_pol[0].push_back(fly_zone_copy[i]);
+            new_pol[1].push_back(fly_zone_copy[i]);
+            continue;
         }
-        for (int j = 0; j < 2; ++j) {
-            if (!new_pol[j].empty()) {
-                rightmost_x[j] = std::max(rightmost_x[j], new_pol[j].back().first);
-            }
+        if (fly_zone_copy[i].first < x) {
+            new_pol[0].push_back(fly_zone_copy[i]);
+        } else {
+            new_pol[1].push_back(fly_zone_copy[i]);
+        }
+
+        if (fly_zone_copy[i + 1].first != x &&
+                ((fly_zone_copy[i].first < x && fly_zone_copy[i + 1].first > x) ||
+                (fly_zone_copy[i].first > x && fly_zone_copy[i + 1].first < x))) {
+            auto intersection = segment_vertical_line_intersection({fly_zone_copy[i], fly_zone_copy[i + 1]}, x);
+            new_pol[0].push_back(intersection);
+            new_pol[1].push_back(intersection);
         }
     }
 //    new_pol[cur_pol].push_back(fly_zone_copy.back());
@@ -278,18 +279,12 @@ std::pair<MapPolygon, MapPolygon> MapPolygon::split_by_vertical_line(double x) {
     new_pol[0].push_back(new_pol[0].front());
     new_pol[1].push_back(new_pol[1].front());
 
-    std::cout << "Splitted by vertical line " << x << std::endl;
-    std::cout << "one: " << std::endl;
-    for (const auto &p: new_pol[0]) {
-        std::cout << p.first << ", " << p.second << std::endl;
-    }
-    std::cout << "------------------\ntwo: " << std::endl;
-    for (const auto &p: new_pol[1]) {
-        std::cout << p.first << ", " << p.second << std::endl;
-    }
-    std::cout << "=====================" << std::endl;
-
     std::pair<MapPolygon, MapPolygon> res;
+
+    for (int i = 0; i < 2; ++i)
+        for (const auto &p: new_pol[i]) {
+            rightmost_x[i] = std::max(rightmost_x[i], p.first);
+        };
 
     // Place the polygon on the left to the left
     if (rightmost_x[0] < rightmost_x[1]) {
@@ -299,8 +294,6 @@ std::pair<MapPolygon, MapPolygon> MapPolygon::split_by_vertical_line(double x) {
         res.first.fly_zone_polygon_points = new_pol[1];
         res.second.fly_zone_polygon_points = new_pol[0];
     }
-    std::cout << "Areas: " << res.first.area() << ", " << res.second.area() << std::endl;
-    std::cout << "Areas: " << res.first.area() << ", " << res.second.area() << std::endl;
     return res;
 }
 
@@ -312,8 +305,7 @@ std::vector<MapPolygon> MapPolygon::split_into_pieces(double max_piece_area) {
         return {*this};
     }
     make_polygon_clockwise(fly_zone_polygon_points);
-
-    std::cout << "Polygon area: " << area() << std::endl;
+    
     int res_polygons = std::ceil(area() / max_piece_area);
     double split_piece_area = area() / res_polygons;
     auto cur_polygon = *this;

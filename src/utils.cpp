@@ -194,3 +194,9 @@ std::pair<double, double> solve_quadratic(double a, double b, double c) {
     }
     return {(-b + std::sqrt(d)) / (2 * a), (-b - std::sqrt(d)) / (2 * a)};
 }
+
+
+point_t segment_vertical_line_intersection(const segment_t &s, double x) {
+    const double &x1 = s.first.first, &y1 = s.first.second, &x2 = s.second.first, &y2 = s.second.second;
+    return {x, -((y2 - y1) * (x2 - x) / (x2 - x1) - y2)};
+}

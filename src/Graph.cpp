@@ -27,7 +27,6 @@ Graph::Graph(const MapPolygon &map_polygon, double rotation_angle, double step):
     for (int row = 0; (y = row * step + m_smallest_y + (step / 2)) < biggest_y; row++) {
         // Now, for simplicity assume that boundaries of each zone (both fly and no-fly) never intersect
         std::vector<double> segments_intersection_x_coord;
-        hom_t horizontal_line = {0, 1, -y};
 
         // Find out all the x coordinates of points of the intersection of horizontal line with any zones boundaries
         auto polygon_segments = map_polygon_rotated.get_all_segments();

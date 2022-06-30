@@ -120,8 +120,9 @@ double EnergyCalculator::calculate_short_line_energy(double v_in, double a_in, d
             return (t_acc + t_dec) * P_r;
         }
     }
-    std::cerr << "Warning: Too short segment" << std::endl;
-    return (s / ((v_in + v_out) / 2)) * P_r;
+//    std::cerr << "Warning: Too short segment" << std::endl;
+    return 0;
+//    return (s / ((v_in + v_out) / 2)) * P_r;
 }
 
 

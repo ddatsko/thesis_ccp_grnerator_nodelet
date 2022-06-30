@@ -79,5 +79,7 @@ inline bool isclose<point_t>(point_t p1, point_t p2, double eps) {
 
 std::pair<double, double> solve_quadratic(double a, double b, double c);
 
+point_t segment_vertical_line_intersection(const segment_t &s, double x);
+
 #endif
 
