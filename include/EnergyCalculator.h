@@ -52,8 +52,6 @@ struct energy_calculator_config_t {
     
 
 class EnergyCalculator {
-public:
-    double get_optimal_speed() {return v_r;}
 private:
   energy_calculator_config_t config;
   double v_r; // speed at which the drone can cover the longest range [m/s]
@@ -67,7 +65,7 @@ private:
    * @param p3: coordinates of the third point
    * @return The angle in radians in range (0..PI)
    */
-  [[nodiscard]] double angle_between_points(std::pair<double, double> p0, std::pair<double, double> p1, std::pair<double, double> p2) const;
+  [[nodiscard]] static double angle_between_points(std::pair<double, double> p0, std::pair<double, double> p1, std::pair<double, double> p2) ;
   
   /*!
    * Calculate the energy spent on turning manuver including the deceleration and acceleration
@@ -116,11 +114,19 @@ public:
    * @param path Path for which the total power consumption will be calculated
    * @return The amount of spent energy to follow the whole path in Joules [J]
    */
-  double calculate_path_energy_consumption(const std::vector<std::pair<double, double>> &path) const;
+  [[nodiscard]] double calculate_path_energy_consumption(const std::vector<std::pair<double, double>> &path) const;
 
-  double get_average_acceleration() const {
+  /*!
+   * @return average acceleration from the config
+   */
+  [[nodiscard]] double get_average_acceleration() const {
       return config.average_acceleration;
   }
+
+  /*!
+   * @return pre-calculated optimal speed of the UAV
+   */
+  [[nodiscard]] double get_optimal_speed() const {return v_r;}
 
 };
 

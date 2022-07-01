@@ -123,7 +123,7 @@ MapPolygon polygon_from_2_segments(segment_t s1, segment_t s2, double x) {
 }
 
 
-vpdd sweeping(const MapPolygon &polygon, double angle, double sweeping_step, bool start_up) {
+vpdd sweeping(const MapPolygon &polygon, double angle, double sweeping_step, double wall_distance, bool start_up) {
     auto rotated_polygon = polygon.rotated(angle);
     vpdd res_path;
     double leftmost_border = std::numeric_limits<double>::max();
@@ -159,12 +159,12 @@ vpdd sweeping(const MapPolygon &polygon, double angle, double sweeping_step, boo
             res_path.emplace_back(current_x, (upper_y + lower_y) / 2);
         } else {
             if (current_direction_up) {
-                res_path.emplace_back(current_x, lower_y + sweeping_step / 2);
-                res_path.emplace_back(current_x, upper_y - sweeping_step / 2);
+                res_path.emplace_back(current_x, lower_y + wall_distance);
+                res_path.emplace_back(current_x, upper_y - wall_distance);
                 current_direction_up = false;
             } else {
-                res_path.emplace_back(current_x, upper_y - sweeping_step / 2);
-                res_path.emplace_back(current_x, lower_y + sweeping_step / 2);
+                res_path.emplace_back(current_x, upper_y - wall_distance);
+                res_path.emplace_back(current_x, lower_y + wall_distance);
                 current_direction_up = true;
             }
         }

@@ -14,7 +14,7 @@ namespace {
 }
 
 double EnergyCalculator::angle_between_points(std::pair<double, double> p0, std::pair<double, double> p1,
-                                              std::pair<double, double> p2) const {
+                                              std::pair<double, double> p2) {
     double a = std::pow(p1.first - p0.first, 2) + std::pow(p1.second - p0.second, 2);
     double b = std::pow(p1.first - p2.first, 2) + std::pow(p1.second - p2.second, 2);
     double c = std::pow(p0.first - p2.first, 2) + std::pow(p0.second - p2.second, 2);
@@ -63,9 +63,16 @@ EnergyCalculator::EnergyCalculator(const energy_calculator_config_t &energy_calc
 }
 
 turning_properties_t EnergyCalculator::calculate_turning_properties(double angle) const {
+    angle = std::abs(angle);
+
+    // If angle is extremely close to pi, to avoid any numerical errors due to numbers close to 0, just assume that no
+    // Deceleration or acceleration is needed at all
+    if (std::abs(angle * 180 / M_PI - 180) < 1) {
+        return {v_r, -config.average_acceleration, v_r, config.average_acceleration, 0};
+    }
+
     // Calculate the new speed, where x coordinate is the first vector direction
     // i.e. v_y == 0; new_vx == v_x if angle = 180 deg; new_vy == v_x if angle = 90 deg
-    angle = std::abs(angle);
     double phi = M_PI - angle;
     double d_vx = v_r * std::sin(phi);
     double d_vy = std::abs(v_r - std::cos(phi) * v_r);

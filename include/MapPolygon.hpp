@@ -25,7 +25,9 @@ struct wrong_polygon_format_error: public std::runtime_error {
 };
 
 
-
+/*!
+ * Structure for representation of a polygon with holes
+ */
 struct MapPolygon {
     using polygon_t = std::vector<point_t>;
 
@@ -37,6 +39,11 @@ struct MapPolygon {
 
     MapPolygon& operator=(const MapPolygon &rhs) = default;
 
+    /*!
+     * Parse a KML file and read points from it.
+     * Only points from polygons called with names "fly-zone" and "no-fly-zone" will be taken into account
+     * @param filename Path to the KML file
+     */
     void load_polygon_from_file(const std::string &filename);
 
     // TODO: check if get_all_points method should be a method or a separate function
@@ -77,7 +84,7 @@ struct MapPolygon {
      * @param n Number of longest edges to encounter
      * @return vector of min(n, number_of_edges) rotation angles
      */
-    std::vector<double> get_n_longest_edges_rotation_angles(size_t n) const;
+    [[nodiscard]] std::vector<double> get_n_longest_edges_rotation_angles(size_t n) const;
 
     /*!
      * Split fly-zone by a vertical line. If there are non-fly zones, they will be just deleted
@@ -86,21 +93,24 @@ struct MapPolygon {
      */
     std::pair<MapPolygon, MapPolygon> split_by_vertical_line(double x);
 
+    /*!
+     * Split the convex polygon with no no-fly zones into the smallest number of
+     * equal area pieces
+     * @warning Works properly only for convex polygons with no no-fly zones
+     * @param max_piece_area Max area of one piece
+     * @return vector of the result of decomposition
+     */
     std::vector<MapPolygon> split_into_pieces(double max_piece_area);
 
+    /*!
+     * Make the fly-zone purely convex by replacing it with its convex hull
+     */
     void make_pure_convex();
 
-    double area() const;
-
-
-    //TODO: implement reducing all the points and not only ones of the outer perimeter
-template<class Op>
-        point_t reduce_points(Op op) {
-            return std::accumulate(fly_zone_polygon_points.begin(),
-                               fly_zone_polygon_points.end(),
-                               *(fly_zone_polygon_points.begin()),
-                               op);
-        }
+    /*!
+     * @return area of the fly-zone
+     */
+    [[nodiscard]] double area() const;
 };
 
 

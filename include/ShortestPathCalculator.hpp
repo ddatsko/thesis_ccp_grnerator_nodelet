@@ -14,6 +14,9 @@ struct shortest_path_calculation_error: public std::runtime_error {
     using runtime_error::runtime_error;
 };
 
+/*!
+ * Struct to make hashing of pair of points possible
+ */
 struct point_pair_hash {
     size_t operator()(const std::pair<point_t, point_t> &p) const {
         auto hash = std::hash<double>{};
@@ -22,7 +25,7 @@ struct point_pair_hash {
 };
 
 /*!
- * Class for calculation of the shortest path between point inside a polygon
+ * Class for calculation of the shortest path between points inside a polygon
  */
 class ShortestPathCalculator {
 private:
@@ -33,10 +36,18 @@ private:
     std::vector<std::vector<size_t>> m_next_vertex_in_path;
     mutable std::unordered_map<std::pair<point_t, point_t>, std::vector<std::pair<double, double>>, point_pair_hash> paths_cache;
 
+    /*!
+     * Run the Floyd-Warshall on initial matrix to calculate shortest paths between all
+     */
     void run_floyd_warshall();
 
-    std::vector<int> polygon_nodes_seen_from_point(point_t point) const;
 
+    /*!
+     * Find the shortest path between polygon nodes with index i and index j
+     * @param i index of the first point
+     * @param j index of the second point
+     * @return path between those points including start and end
+     */
     std::vector<point_t> shortest_path_between_polygon_nodes(size_t i, size_t j) const;
 
     /*!
@@ -76,6 +87,12 @@ public:
      */
     std::vector<point_t> get_approximate_shortest_path(point_t p1, point_t p2) const;
 
+    /*!
+     * Get the exact Euclidean shortest path between two points inside of the polygon
+     * @param p1 source point
+     * @param p2 destination point
+     * @return path between point including the start and end node
+     */
     std::vector<point_t> shortest_path_between_points(point_t p1, point_t p2) const;
 
 };

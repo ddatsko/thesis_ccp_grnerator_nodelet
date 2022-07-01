@@ -21,10 +21,11 @@ enum decomposition_type_t {TRAPEZOIDAL_DECOMPOSITION,
  * @param polygon: Polygon with only fly-zone that should be swept
  * @param angle: angle of sweeping lines
  * @param sweeping_step distance between sweeping lines
+ * @param wall_distance how far from the top and bottom edge to make a turn. Can be negative to leave the fly zone
  * @param start_up Whether the first column should be covered by movement up or down
  * @return A sequence of points (longitude, latitude) that need to be visited by drone
  */
-vpdd sweeping(const MapPolygon &polygon, double angle, double sweeping_step, bool start_up=false);
+vpdd sweeping(const MapPolygon &polygon, double angle, double sweeping_step, double wall_distance=0, bool start_up=false);
 
 /*!
  * Decompose the MapPolygon into smaller MapPolygons using trapezoidal decomposition algorithm
