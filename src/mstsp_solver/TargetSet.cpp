@@ -4,7 +4,6 @@
 
 #include "mstsp_solver/TargetSet.h"
 #include "algorithms.hpp"
-#include "Graph.hpp"
 #include <iostream>
 #include <iomanip>
 
@@ -33,7 +32,7 @@ namespace mstsp_solver {
     void TargetSet::add_rotation_angles(const std::vector<double> &rotation_angles) {
         for (auto angle: rotation_angles) {
             for (int i = 0; i < 2; i++) {
-                auto sweeping_path = sweeping(polygon, angle, sweeping_step, static_cast<bool>(i));
+                auto sweeping_path = sweeping(polygon, angle, sweeping_step, 0.5, static_cast<bool>(i));
                 double path_energy = energy_calculator.calculate_path_energy_consumption(sweeping_path);
 
                 targets.push_back(Target{static_cast<bool>(i),

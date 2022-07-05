@@ -120,13 +120,12 @@ double get_segment_rotation(segment_t segment);
  * @param eps Possible error
  * @return true if the distance between n1 and n2 is less than EPS
  */
-template<typename T, typename T2=double>
-bool isclose(T n1, T n2, T2 eps) {
+template<typename T>
+bool isclose(T n1, T n2, double eps) {
     return std::abs(n1 - n2) < eps;
 }
 
-template<>
-bool isclose<point_t, double>(point_t p1, point_t p2, double eps) {
+inline bool isclose(point_t p1, point_t p2, double eps) {
     return isclose(p1.first, p2.first, eps) && isclose(p1.second, p2.second, eps);
 }
 

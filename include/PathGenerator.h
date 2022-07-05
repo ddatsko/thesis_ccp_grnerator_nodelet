@@ -50,6 +50,7 @@ namespace path_generation {
 
         // | ---------------------- msg callbacks --------------------- |
 
+        ros::ServiceServer m_generate_paths_service_server;
 
         bool callback_generate_paths(thesis_path_generator::GeneratePaths::Request &req, thesis_path_generator::GeneratePaths::Response &res);
 

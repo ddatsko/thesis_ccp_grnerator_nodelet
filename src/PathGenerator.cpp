@@ -59,10 +59,9 @@ namespace path_generation {
         } else {
             ROS_INFO_ONCE("[PathGenerator]: loaded parameters");
         }
-        // | ---------------- some data post-processing --------------- |
+
         m_generate_paths_service_server = nh.advertiseService("/generate_paths",
                                                               &PathGenerator::callback_generate_paths, this);
-
 
         ROS_INFO_ONCE("[PathGenerator]: initialized");
 

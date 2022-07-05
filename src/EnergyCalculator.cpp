@@ -32,7 +32,7 @@ EnergyCalculator::EnergyCalculator(const energy_calculator_config_t &energy_calc
     double v_i_h = std::sqrt((config.drone_mass * EARTH_GRAVITY) /
                              (2 * AIR_DENSITY * M_PI * config.propeller_radius * config.propeller_radius *
                               config.number_of_propellers)); // (4)
-    std::cout << v_i_h << std::endl;
+//    std::cout << v_i_h << std::endl;
     // Power consumption on hover
 //  double P_h = (std::sqrt(config.number_of_propellers) * config.drone_mass * EARTH_GRAVITY * v_i_h) / (PROPELLER_EFFICIENCY); // (5)
     double P_h = std::sqrt(std::pow(config.drone_mass * EARTH_GRAVITY, 3)) / (PROPELLER_EFFICIENCY * config.propeller_radius * std::sqrt(2 * AIR_DENSITY * M_PI * config.number_of_propellers));
@@ -85,6 +85,8 @@ turning_properties_t EnergyCalculator::calculate_turning_properties(double angle
 
     double energy = config.drone_mass * 0.5 * (std::pow(d_vx, 2) + std::pow(v_r, 2) - std::pow(v_r - d_vy, 2));
 
+//    std::cout << angle << ", " << v_ty << v_r << ", " << std::endl;
+
     return {v_ty, a_before, v_ty, a_after, energy};
 }
 
@@ -100,6 +102,8 @@ double EnergyCalculator::calculate_straight_line_energy(double v_in, double a_in
     double s_tot = std::sqrt(std::pow(p1.first - p2.first, 2) + std::pow(p1.second - p2.second, 2));
 
     if (s_acc + s_dec <= s_tot) {
+//        std::cout << "S tot: " << s_tot << std::endl;
+//        std::cout << "Energy: " << (t_acc + t_dec + (s_tot - s_acc - s_dec) / v_r) * P_r << std::endl;
         return (t_acc + t_dec + (s_tot - s_acc - s_dec) / v_r) * P_r;
     } else {
         return calculate_short_line_energy(v_in, a_in, v_out, a_out, s_tot);
@@ -148,7 +152,7 @@ double EnergyCalculator::calculate_path_energy_consumption(const std::vector<std
 
     for (size_t i = 0; i + 1 < path.size(); ++i) {
         total_energy += turns[i].energy;
-        double energy = calculate_straight_line_energy(0, turns[i].a_after, 0, turns[i + 1].a_before, path[i], path[i + 1]);
+        double energy = calculate_straight_line_energy(turns[i].v_after, turns[i].a_after, turns[i + 1].v_before, turns[i + 1].a_before, path[i], path[i + 1]);
         total_energy += energy;
     }
     return total_energy;

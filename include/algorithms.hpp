@@ -2,7 +2,6 @@
 #define MAP_TO_GRAPH_ALGORITHMS_HPP
 
 #include <vector>
-#include "Graph.hpp"
 #include "MapPolygon.hpp"
 
 using vpdd = std::vector<point_t>;

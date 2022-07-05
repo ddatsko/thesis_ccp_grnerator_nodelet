@@ -36,7 +36,7 @@ namespace mstsp_solver {
         for (size_t i = 0; i + 1 < path.size(); ++i) {
             energy += path[i].energy_consumption;
             energy += m_energy_calculator.calculate_straight_line_energy(0,
-                                                                         m_energy_calculator.get_average_acceleration(),
+                                                                         -m_energy_calculator.get_average_acceleration(),
                                                                          0,
                                                                          m_energy_calculator.get_average_acceleration(),
                                                                          path[i].end_point,
@@ -47,8 +47,8 @@ namespace mstsp_solver {
         }
         energy += path[path.size() - 1].energy_consumption;
         auto a = m_energy_calculator.get_average_acceleration();
-        energy += m_energy_calculator.calculate_straight_line_energy(0, a, 0, a, m_config.starting_point, path[0].starting_point);
-        energy += m_energy_calculator.calculate_straight_line_energy(0, a, 0, a, path[path.size() - 1].end_point, m_config.starting_point);
+        energy += m_energy_calculator.calculate_straight_line_energy(0, a, 0, -a, m_config.starting_point, path[0].starting_point);
+        energy += m_energy_calculator.calculate_straight_line_energy(0, a, 0, -a, path[path.size() - 1].end_point, m_config.starting_point);
 
         return energy;
     }
@@ -142,7 +142,7 @@ namespace mstsp_solver {
             res.insert(res.end(), path_to_target.begin(), path_to_target.end());
 
             auto path = sweeping(m_target_sets[target.target_set_index].polygon, target.rotation_angle,
-                                 m_config.sweeping_step, target.first_line_up);
+                                 m_config.sweeping_step, 0.5, target.first_line_up);
             res.insert(res.end(), path.begin(), path.end());
         }
         auto path_to_start = m_shortest_path_calculator.shortest_path_between_points(res.back(), m_config.starting_point);
@@ -472,4 +472,3 @@ namespace mstsp_solver {
         solution[uav2][path_index_2] = targets_2[target_2_index];
     }
 }
-#pragma clang diagnostic pop

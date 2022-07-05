@@ -137,12 +137,11 @@ vpdd sweeping(const MapPolygon &polygon, double angle, double sweeping_step, dou
     while (true) {
         std::set<double> intersection_ys;
         for (const auto &segment: rotated_polygon.get_all_segments()) {
-            hom_t vertical_line = {1, 0, -current_x};
             if ((segment.first.first < current_x && segment.second.first < current_x) ||
                     (segment.first.first > current_x && segment.second.first > current_x)) {
                 continue;
             }
-            auto intersection = segment_line_intersection(segment.first, segment.second, vertical_line);
+            auto intersection = segment_vertical_line_intersection(segment, current_x);
             intersection_ys.insert(intersection.second);
         }
         if (intersection_ys.size() <= 1) {
@@ -154,7 +153,7 @@ vpdd sweeping(const MapPolygon &polygon, double angle, double sweeping_step, dou
             continue;
         }
         double lower_y = *intersection_ys.begin();
-        double upper_y = *(++intersection_ys.begin());
+        double upper_y = *intersection_ys.rbegin();
         if (upper_y - lower_y < sweeping_step) {
             res_path.emplace_back(current_x, (upper_y + lower_y) / 2);
         } else {
@@ -175,7 +174,7 @@ vpdd sweeping(const MapPolygon &polygon, double angle, double sweeping_step, dou
     if (res_path.empty()) {
         double sum_x = 0.0;
         double sum_y = 0.0;
-        for (const auto&[x, y]: polygon.fly_zone_polygon_points) {
+        for (const auto&[x, y]: rotated_polygon.fly_zone_polygon_points) {
             sum_x += x;
             sum_y += y;
         }

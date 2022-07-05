@@ -198,5 +198,13 @@ std::pair<double, double> solve_quadratic(double a, double b, double c) {
 
 point_t segment_vertical_line_intersection(const segment_t &s, double x) {
     const double &x1 = s.first.first, &y1 = s.first.second, &x2 = s.second.first, &y2 = s.second.second;
+
+    // TODO: maybe, use some other thing for the event when the segment is completely vertical
+    // Perfectly vertical line
+    if (s.first.first == s.second.first) {
+        // Return just the middle point of the segment
+        return {x, (y1 + y2) / 2};
+    }
+
     return {x, -((y2 - y1) * (x2 - x) / (x2 - x1) - y2)};
 }
