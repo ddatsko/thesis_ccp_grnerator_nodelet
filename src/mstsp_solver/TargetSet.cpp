@@ -6,6 +6,7 @@
 #include "algorithms.hpp"
 #include <iostream>
 #include <iomanip>
+#include <algorithm>
 
 namespace mstsp_solver {
 
@@ -25,7 +26,18 @@ namespace mstsp_solver {
                          size_t number_of_edges_rotations) : index(index), polygon(polygon),
                                                              energy_calculator(energy_calculator),
                                                              sweeping_step(sweeping_step) {
-        add_rotation_angles(polygon.get_n_longest_edges_rotation_angles(number_of_edges_rotations));
+
+        auto thin_coverage = thin_polygon_coverage(polygon, sweeping_step, 0.5);
+        // If no thin coverage path is generated because the polygon is not thin enough, perform normal sweeping procedure
+        if (thin_coverage.empty()) {
+            add_rotation_angles(polygon.get_n_longest_edges_rotation_angles(number_of_edges_rotations));
+        } else {
+            targets.push_back(Target{
+                true, 0.0, 0.0, thin_coverage[0], thin_coverage.back(), index, targets.size()
+            });
+        }
+
+
     }
 
 

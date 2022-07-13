@@ -336,3 +336,30 @@ std::vector<MapPolygon> MapPolygon::split_into_pieces(double max_piece_area) {
     res.push_back(cur_polygon);
     return res;
 }
+
+point_t MapPolygon::leftmost_point() const {
+    return std::reduce(fly_zone_polygon_points.begin(), fly_zone_polygon_points.end(),
+                       std::make_pair(std::numeric_limits<double>::max(), std::numeric_limits<double>::max()),
+                       [](const auto &p1, const auto &p2){return p1.first < p2.first ? p1 : p2;});
+}
+
+point_t MapPolygon::rightmost_point() const {
+    return std::reduce(fly_zone_polygon_points.begin(), fly_zone_polygon_points.end(),
+                       std::make_pair(std::numeric_limits<double>::min(), std::numeric_limits<double>::min()),
+                       [](const auto &p1, const auto &p2){return p1.first < p2.first ? p2 : p1;});
+}
+
+
+std::optional<double> MapPolygon::is_thinner_than_rotation(double width) const {
+    for (const auto &segment: get_all_segments()) {
+        auto segment_rotation = get_segment_rotation(segment);
+        segment_rotation += segment_rotation < M_PI ? M_PI_2 : -M_PI_2;
+        auto rotated_polygon = rotated(segment_rotation);
+
+        if ((rotated_polygon.rightmost_point().first - rotated_polygon.leftmost_point().first) < width) {
+            std::cout << "THin polygon found" << std::endl;
+            return segment_rotation;
+        }
+    }
+    return std::nullopt;
+}

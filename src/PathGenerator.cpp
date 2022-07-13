@@ -143,6 +143,7 @@ namespace path_generation {
             polygons_divided.insert(polygons_divided.end(), splitted.begin(), splitted.end());
         }
         polygons_decomposed = polygons_divided;
+        ROS_INFO_STREAM("[PathGenerator]: Divided large polygons into smaller ones");
 
         EnergyCalculator energy_calculator{energy_config};
         auto starting_point = gps_coordinates_to_meters({req.start_lat, req.start_lon}, gps_transform_origin);
@@ -158,7 +159,7 @@ namespace path_generation {
 
         // Modify the finishing coordinate to prevent drones from collision at the end
         for (size_t i = 0; i < solver_res.size(); ++i) {
-            solver_res[i].back().first += static_cast<double>(i) * 3;
+            solver_res[i].back().x += static_cast<double>(i) * 3;
         }
 
         res.success = true;
@@ -166,9 +167,9 @@ namespace path_generation {
         res.energy_consumptions.resize(solver_res.size());
         for (size_t i = 0; i < solver_res.size(); ++i) {
             res.paths_gps[i].header.frame_id = "latlon_origin";
-            res.energy_consumptions[i] = energy_calculator.calculate_path_energy_consumption(solver_res[i]);
+            res.energy_consumptions[i] = energy_calculator.calculate_path_energy_consumption(remove_path_heading(solver_res[i]));
 
-            auto generated_path =  _generate_path_for_simulation_one_drone(solver_res[i], gps_transform_origin, req.distance_for_turning, req.max_number_of_extra_points, energy_calculator.get_optimal_speed());
+            auto generated_path =  _generate_path_for_simulation_one_drone(solver_res[i], gps_transform_origin, req.distance_for_turning, req.max_number_of_extra_points, energy_calculator.get_optimal_speed(), energy_config.average_acceleration);
 
             res.paths_gps[i] = generated_path;
         }
@@ -177,26 +178,13 @@ namespace path_generation {
 
 
     mrs_msgs::Path PathGenerator::_generate_path_for_simulation_one_drone(
-            const std::vector<std::pair<double, double>> &points_to_visit,
+            const std::vector<point_heading_t<double>> &points_to_visit,
             point_t gps_transform_origin,
             double distance_for_turning,
             int max_number_of_extra_points,
-            double optimal_speed) {
+            double optimal_speed,
+            double horizontal_acceleration) {
         mrs_msgs::Path path;
-
-        std::vector<std::pair<double, double>> points_to_visit_dense;
-        points_to_visit_dense.push_back(points_to_visit.front());
-        for (size_t i = 1; i < points_to_visit.size(); ++i) {
-            double distance = distance_between_points(points_to_visit[i - 1], points_to_visit[i]);
-            int extra_points_fit = std::floor(distance / distance_for_turning);
-            // Add one point before the second point in segment to prevent yawing during the whole segment and constrain it only
-            // to the last "distance_for_turning" meters
-            for (int j = std::min(extra_points_fit - 1, max_number_of_extra_points); j > 0; --j) {
-                points_to_visit_dense.emplace_back(points_to_visit[i].first - j * (points_to_visit[i].first - points_to_visit[i - 1].first) / (distance / distance_for_turning),
-                                                   points_to_visit[i].second - j * (points_to_visit[i].second - points_to_visit[i - 1].second) / (distance / distance_for_turning));
-            }
-            points_to_visit_dense.push_back(points_to_visit[i]);
-        }
 
         // Set the parameters for trajectory generation
         path.header.stamp = ros::Time::now();
@@ -207,13 +195,13 @@ namespace path_generation {
         path.use_heading = true;
         path.stop_at_waypoints = false;
         path.loop = false;
-        path.override_constraints = false;
+        path.override_constraints = true;
 
         path.override_max_velocity_horizontal = optimal_speed;
-        path.override_max_acceleration_horizontal = 2;
+        path.override_max_acceleration_horizontal = horizontal_acceleration;
         path.override_max_jerk_horizontal = 200;
         path.override_max_jerk_vertical = 200;
-        path.override_max_acceleration_vertical = 4;
+        path.override_max_acceleration_vertical = 1;
         path.override_max_velocity_vertical = optimal_speed;
 
         // TODO: find out what this parameter means
@@ -221,14 +209,16 @@ namespace path_generation {
 
         std::vector<mrs_msgs::Reference> points;
 
-        for (auto p: points_to_visit_dense) {
+        for (auto p: points_to_visit) {
             mrs_msgs::ReferenceStamped point_3d;
             point_3d.header.frame_id = "latlon_origin";
 
-            p = meters_to_gps_coordinates(p, gps_transform_origin);
-            point_3d.reference.position.x = p.first;
-            point_3d.reference.position.y = p.second;
+            auto gps_coordinates = meters_to_gps_coordinates({p.x, p.y}, gps_transform_origin);
+            point_3d.reference.position.x = p.x;
+            point_3d.reference.position.y = p.y;
             point_3d.reference.position.z = m_drones_altitude;
+            point_3d.reference.heading = p.heading;
+
 
             points.push_back(point_3d.reference);
         }

@@ -10,6 +10,27 @@
 #include <iostream>
 #include <algorithm>
 #include <list>
+#include <ros/ros.h>
+
+
+// TODO: Move these function to some other place in the application. Maybe, to utils and then move the point_heading_t struct there too
+vpdd remove_path_heading(const std::vector<point_heading_t<double>> &init) {
+    vpdd res;
+    for (const auto &p: init) {
+        res.emplace_back(p.x, p.y);
+    }
+    return res;
+}
+
+std::vector<point_heading_t<double>> add_path_heading(const vpdd &init, double heading) {
+    std::vector<point_heading_t<double>> res;
+    for (const auto &p: init) {
+        res.emplace_back(p);
+        res.back().heading = heading;
+    }
+    return res;
+}
+
 
 namespace mstsp_solver {
 
@@ -108,7 +129,6 @@ namespace mstsp_solver {
             if (random >= possible_insertions.size()) {
                 random = possible_insertions.size() - 1;
             }
-//            std::cout << "Chosen insertion index: " << random << std::endl;
             Insertion chosen_insertion = possible_insertions[random];
 
 //            std::cout << "Chosen target target set: " << target_sets[chosen_insertion.target_set_index].targets[chosen_insertion.target_index].target_set_index << std::endl;
@@ -123,29 +143,36 @@ namespace mstsp_solver {
 
 
 
-    std::vector<std::vector<point_t>> MstspSolver::get_drones_paths(const solution_t &solution) const {
-        std::vector<std::vector<point_t>> res;
+    std::vector<std::vector<point_heading_t<double>>> MstspSolver::get_drones_paths(const solution_t &solution) const {
+        std::vector<std::vector<point_heading_t<double>>> res;
         for (const auto & i : solution) {
-            res.push_back(get_path_from_targets(i));
+            res.push_back(path_with_heading(i));
         }
         return res;
     }
 
     std::vector<point_t> MstspSolver::get_path_from_targets(const std::vector<Target> &targets) const {
-        std::vector<point_t> res;
-        res.push_back(m_config.starting_point);
+        return remove_path_heading(path_with_heading((targets)));
+    }
+
+    std::vector<point_heading_t<double>> MstspSolver::path_with_heading(const std::vector<Target> &targets) const {
+        std::vector<point_heading_t<double>> res;
+        res.emplace_back(m_config.starting_point);
+        double last_heading = 0;
         for (const auto &target: targets) {
             // Calculate the path from previous target to this one using the shortest path calculator
-            auto path_to_target = m_shortest_path_calculator.shortest_path_between_points(res.back(), target.starting_point);
+            auto path_to_target = add_path_heading(m_shortest_path_calculator.shortest_path_between_points({res.back().x, res.back().y}, target.starting_point), last_heading);
             path_to_target.pop_back();
             path_to_target.erase(path_to_target.begin());
+
             res.insert(res.end(), path_to_target.begin(), path_to_target.end());
 
-            auto path = sweeping(m_target_sets[target.target_set_index].polygon, target.rotation_angle,
-                                 m_config.sweeping_step, 0.5, target.first_line_up);
+            auto path = add_path_heading(sweeping(m_target_sets[target.target_set_index].polygon, target.rotation_angle,
+                                 m_config.sweeping_step, 0.5, target.first_line_up), target.rotation_angle);
             res.insert(res.end(), path.begin(), path.end());
+            last_heading = target.rotation_angle;
         }
-        auto path_to_start = m_shortest_path_calculator.shortest_path_between_points(res.back(), m_config.starting_point);
+        auto path_to_start = add_path_heading(m_shortest_path_calculator.shortest_path_between_points({res.back().x, res.back().y}, m_config.starting_point), last_heading);
         path_to_start.erase(path_to_start.begin());
 
         res.insert(res.end(), path_to_start.begin(), path_to_start.end());
@@ -153,7 +180,9 @@ namespace mstsp_solver {
     }
 
 
-    std::vector<std::vector<point_t>> MstspSolver::solve() const {
+
+    std::vector<std::vector<point_heading_t<double>>> MstspSolver::solve() const {
+        ROS_INFO_STREAM("[PathGenerator]: Solving started");
         solution_t init_solution = greedy_random();
         size_t nodes = 0;
         for (const auto &uav_path: init_solution) {

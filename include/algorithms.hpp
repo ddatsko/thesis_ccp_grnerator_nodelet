@@ -47,4 +47,14 @@ std::vector<MapPolygon> trapezoidal_decomposition(const MapPolygon &polygon,  de
 MapPolygon polygon_from_2_segments(segment_t s1, segment_t s2, double x);
 
 
+/*!
+ * Cover thin polygon, width of which is smaller than sweeping_step / 2 with at least one rotation angle
+ * @param polygon Polygon to be covered
+ * @param sweeping_step Sweeping step of the algorithm
+ * @param wall_distance Distance to polygon walls while performing sweeping
+ * @return Coverage paths if the polygon is truly that thin. Empty vector if the polygon is not thin enough
+ */
+vpdd thin_polygon_coverage(const MapPolygon &polygon, double sweeping_step, double wall_distance);
+
+
 #endif //MAP_TO_GRAPH_ALGORITHMS_HPP

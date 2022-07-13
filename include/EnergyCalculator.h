@@ -34,6 +34,7 @@ struct turning_properties_t {
     double v_after;
     double a_after;
     double energy;
+    double d_vym = 0.0;
 };
 
 /*! 
@@ -91,6 +92,13 @@ public:
    */
   [[nodiscard]] double calculate_straight_line_energy(double v_in, double a_in, double v_out, double a_out, const std::pair<double, double> &p1,
                                  const std::pair<double, double> &p2) const;
+
+  [[nodiscard]] double calculate_straight_line_energy(double v_in, double a_in, double v_out, double a_out, double s) const;
+
+
+  [[nodiscard]] double calculate_straight_line_energy_between_turns(const turning_properties_t &turn1,
+                                                                  const turning_properties_t &turn2,
+                                                                  double s_tot) const;
 
     /*!
    * Get the energy spent on traversing a short lin, on which the optimal speed cannot be reached

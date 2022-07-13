@@ -90,23 +90,44 @@ turning_properties_t EnergyCalculator::calculate_turning_properties(double angle
     return {v_ty, a_before, v_ty, a_after, energy};
 }
 
-double EnergyCalculator::calculate_straight_line_energy(double v_in, double a_in, double v_out, double a_out, const std::pair<double, double> &p1,
-                                                        const std::pair<double, double> &p2) const {
+double EnergyCalculator::calculate_straight_line_energy(double v_in, double a_in, double v_out, double a_out, double s_tot) const {
     // Calculate the time and distance travelled during the acceleration and deceleration phases
     double t_acc = std::abs(v_r - v_in) / a_in;
     double s_acc = v_in * t_acc + 0.5 * a_in * std::pow(t_acc, 2);
+
     double t_dec = std::abs((v_r - v_out) / a_out);
     double s_dec = v_r * t_dec + 0.5 * a_out * std::pow(t_dec, 2);
 
-    // Calculate the total distance between two points
-    double s_tot = std::sqrt(std::pow(p1.first - p2.first, 2) + std::pow(p1.second - p2.second, 2));
-
     if (s_acc + s_dec <= s_tot) {
-//        std::cout << "S tot: " << s_tot << std::endl;
-//        std::cout << "Energy: " << (t_acc + t_dec + (s_tot - s_acc - s_dec) / v_r) * P_r << std::endl;
         return (t_acc + t_dec + (s_tot - s_acc - s_dec) / v_r) * P_r;
     } else {
         return calculate_short_line_energy(v_in, a_in, v_out, a_out, s_tot);
+    }
+}
+
+double EnergyCalculator::calculate_straight_line_energy(double v_in, double a_in, double v_out, double a_out, const std::pair<double, double> &p1,
+                                                        const std::pair<double, double> &p2) const {
+    return calculate_straight_line_energy(v_in, a_in, v_out, a_out, distance_between_points(p1, p2));
+}
+
+double EnergyCalculator::calculate_straight_line_energy_between_turns(const turning_properties_t &turn1,
+                                                                      const turning_properties_t &turn2,
+                                                                      double s_tot) const {
+
+    double t_acc_slow = std::abs(turn1.d_vym - turn1.v_after) / turn1.a_after;
+    double s_acc_slow = turn1.v_after * t_acc_slow + 0.5 * turn1.a_after * std::pow(t_acc_slow, 2);
+
+    double t_dec_slow = std::abs((turn2.d_vym - turn2.v_before) / turn2.a_before);
+    double s_dec_slow = v_r * t_dec_slow + 0.5 * turn2.a_before * std::pow(t_dec_slow, 2);
+
+    // If the segment is not too short for at least slow acceleration and slow deceleration -- do it
+    if (s_acc_slow + s_dec_slow < s_tot) {
+        return calculate_straight_line_energy(turn1.d_vym, config.average_acceleration, turn2.d_vym, -config.average_acceleration, s_tot - s_acc_slow - s_dec_slow) +
+               P_r * (t_dec_slow + t_acc_slow);
+    } else {
+        // If the UAV can only start the slow deceleration after the slow acceleration
+        return calculate_short_line_energy(turn1.v_after, turn1.a_after, turn2.v_before, turn2.a_before,
+                                           s_tot);
     }
 }
 
@@ -118,7 +139,7 @@ double EnergyCalculator::calculate_short_line_energy(double v_in, double a_in, d
 
     double sol[2] = {solved.first, solved.second};
     for (double si : sol) {
-        if (si == FP_NAN) {
+        if (std::isnan(si) || si < v_in || si < v_out) {
             continue;
         }
         double t_acc = (si - v_in) / a_in;
@@ -152,9 +173,8 @@ double EnergyCalculator::calculate_path_energy_consumption(const std::vector<std
 
     for (size_t i = 0; i + 1 < path.size(); ++i) {
         total_energy += turns[i].energy;
-        double energy = calculate_straight_line_energy(turns[i].v_after, turns[i].a_after, turns[i + 1].v_before, turns[i + 1].a_before, path[i], path[i + 1]);
+        auto energy = calculate_straight_line_energy_between_turns(turns[i], turns[i + 1], distance_between_points(path[i], path[i + 1]));
         total_energy += energy;
     }
     return total_energy;
 }
-

@@ -80,6 +80,7 @@ namespace {
         }
 
     }
+
 }
 
 
@@ -122,16 +123,48 @@ MapPolygon polygon_from_2_segments(segment_t s1, segment_t s2, double x) {
     return polygon;
 }
 
+vpdd thin_polygon_coverage(const MapPolygon &polygon, double sweeping_step, double wall_distance) {
+    auto thin_rotation = polygon.is_thinner_than_rotation(sweeping_step / 2);
+    vpdd res;
+    if (thin_rotation.has_value()) {
+        auto polygon_horizontal = polygon.rotated(thin_rotation.value() + M_PI_2);
+        segment_t coverage_line = {polygon_horizontal.leftmost_point(), polygon_horizontal.rightmost_point()};
+
+        // If the polygon is thin in both of directions - generate only one point for its coverage
+        if (coverage_line.second.first - coverage_line.first.first < wall_distance * 2) {
+            auto segment_center = (coverage_line.first.first + coverage_line.second.first) / 2;
+            res = {{segment_center, vertical_line_segment_intersection(coverage_line, segment_center)}};
+        } else {
+            res = {{coverage_line.first.first + wall_distance,  vertical_line_segment_intersection(coverage_line,
+                                                                                                    coverage_line.first.first +
+                                                                                                    wall_distance)},
+                    {coverage_line.second.first - wall_distance, vertical_line_segment_intersection(coverage_line,
+                                                                                                    coverage_line.second.first -
+                                                                                                    wall_distance)}};
+        }
+    }
+    for (auto &p: res) {
+        p = rotate_point(p, -(thin_rotation.value() + M_PI_2));
+    }
+    return res;
+}
 
 vpdd sweeping(const MapPolygon &polygon, double angle, double sweeping_step, double wall_distance, bool start_up) {
+    auto thin_sweeping = thin_polygon_coverage(polygon, sweeping_step, wall_distance);
+    if (not thin_sweeping.empty()) {
+        return thin_sweeping;
+    }
+
     auto rotated_polygon = polygon.rotated(angle);
     vpdd res_path;
-    double leftmost_border = std::numeric_limits<double>::max();
+    double leftmost_border = std::numeric_limits<double>::max(), rightmost_border = std::numeric_limits<double>::min();
     for (const auto &p: rotated_polygon.get_all_points()) {
         leftmost_border = std::min(leftmost_border, p.first);
+        rightmost_border = std::max(rightmost_border, p.first);
     }
     double current_x = leftmost_border + sweeping_step / 2;
     bool current_direction_up = start_up;
+    bool first = true;
 
     bool last_one = false;
     while (true) {
@@ -148,13 +181,21 @@ vpdd sweeping(const MapPolygon &polygon, double angle, double sweeping_step, dou
             if (last_one) {
                 break;
             }
+            // If this happens on the first segment then the
+            if (first) {
+                first = false;
+                last_one = true;
+                current_x = (leftmost_border + rightmost_border) / 2;
+                continue;
+            }
+
             current_x -= sweeping_step / 2;
             last_one = true;
             continue;
         }
         double lower_y = *intersection_ys.begin();
         double upper_y = *intersection_ys.rbegin();
-        if (upper_y - lower_y < sweeping_step) {
+        if (upper_y - lower_y < 2 * wall_distance) {
             res_path.emplace_back(current_x, (upper_y + lower_y) / 2);
         } else {
             if (current_direction_up) {
@@ -167,6 +208,7 @@ vpdd sweeping(const MapPolygon &polygon, double angle, double sweeping_step, dou
                 current_direction_up = true;
             }
         }
+        first = false;
         current_x += sweeping_step;
     }
 

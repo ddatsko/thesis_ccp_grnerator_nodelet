@@ -25,6 +25,7 @@
 #include "EnergyCalculator.h"
 #include <thesis_path_generator/GeneratePaths.h>
 #include "utils.hpp"
+#include "mstsp_solver/MstspSolver.h"
 
 namespace path_generation {
 
@@ -62,11 +63,12 @@ namespace path_generation {
          * consecutive points is larger, new ones will be added
          * @return Path that can be sent to the follower or trajectory generator to follow it
          */
-        mrs_msgs::Path _generate_path_for_simulation_one_drone(const std::vector<std::pair<double, double>> &points_to_visit,
+        mrs_msgs::Path _generate_path_for_simulation_one_drone(const std::vector<point_heading_t<double>> &points_to_visit,
                                                                point_t gps_transform_origin,
                                                                double distance_for_turning = std::numeric_limits<double>::max(),
                                                                int max_number_of_extra_points = 0,
-                                                               double optimal_speed=1);
+                                                               double optimal_speed=1,
+                                                               double horizontal_acceleration=2.0);
     };
 //}
 

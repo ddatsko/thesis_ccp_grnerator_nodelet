@@ -111,6 +111,23 @@ struct MapPolygon {
      * @return area of the fly-zone
      */
     [[nodiscard]] double area() const;
+
+    /*!
+     * @return fly-zone point with the lowest X coordinate. Any of them if multiple exist
+     */
+    [[nodiscard]] point_t leftmost_point() const;
+
+    /*!
+     * @return fly-zone point with the largest X coordinate. Any of them if multiple exist
+     */
+    [[nodiscard]] point_t rightmost_point() const;
+
+
+    // TODO: rename the function below
+    /*!
+     * @return the rotation that should be applied to po
+     */
+    [[nodiscard]] std::optional<double> is_thinner_than_rotation(double width) const;
 };
 
 
