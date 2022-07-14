@@ -214,10 +214,10 @@ namespace path_generation {
             point_3d.header.frame_id = "latlon_origin";
 
             auto gps_coordinates = meters_to_gps_coordinates({p.x, p.y}, gps_transform_origin);
-            point_3d.reference.position.x = p.x;
-            point_3d.reference.position.y = p.y;
+            point_3d.reference.position.x = gps_coordinates.first;
+            point_3d.reference.position.y = gps_coordinates.second;
             point_3d.reference.position.z = m_drones_altitude;
-            point_3d.reference.heading = p.heading;
+            point_3d.reference.heading = p.heading + M_PI_2;
 
 
             points.push_back(point_3d.reference);
