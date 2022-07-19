@@ -18,7 +18,7 @@ check_trajectory_deviation:
 path_straightener:
   enabled: false
   max_deviation: 0.3 # [m]
-  max_hdg_deviation: 0.1 # [rad]
+  max_hdg_deviation: 0.05 # [rad]
 
 # waypoints too close to each other cause issues in the optimization
 # the incoming path is preprocessed, such waypoints are neglected

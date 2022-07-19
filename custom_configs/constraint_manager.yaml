@@ -1,6 +1,6 @@
 constraints: [
-  "slow",
   "medium",
+  "slow",
 ]
 
 constraint_management:
@@ -54,7 +54,7 @@ slow:
 medium:
 
   horizontal:
-    speed: 20.0
+    speed: 10.0
     acceleration: 1.5
     jerk: 20.0
     snap: 20.0

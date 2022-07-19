@@ -42,6 +42,7 @@ namespace path_generation {
 
         /* ros parameters */
         double m_drones_altitude;
+        double m_unique_altitude_step;
         energy_calculator_config_t m_energy_config;
 
         /* other parameters */

@@ -11,6 +11,10 @@ namespace {
     const double RANGE_POWER_CONSUMPTION_COEFF = 1.092; // taken from (17), ratio of power consumption when maximizing the range to power consumption on hover
     const double MOTOR_EFFICIENCY = 0.75; // Efficiency of the motor (ratio of electric power converted to mechanical)
 
+    double cot(double angle) {
+        return 1 / std::tan(angle);
+    }
+
 }
 
 double EnergyCalculator::angle_between_points(std::pair<double, double> p0, std::pair<double, double> p1,
@@ -80,14 +84,17 @@ turning_properties_t EnergyCalculator::calculate_turning_properties(double angle
     double a_before = -config.average_acceleration * std::sin(omega_acc);
     double a_after = config.average_acceleration * std::cos(omega_acc + (M_PI_2 - phi));
 
+
     double v_tx = std::min(d_vx / 2, std::sqrt(2 * config.allowed_path_deviation * config.average_acceleration * std::cos(omega_acc)));
     double v_ty = v_tx / std::tan((M_PI - angle) / 2);
 
     double energy = config.drone_mass * 0.5 * (std::pow(d_vx, 2) + std::pow(v_r, 2) - std::pow(v_r - d_vy, 2));
 
+    // TODO: it seems, there may be an error here
+    double d_vym = std::min(v_ty + (v_tx * cot((M_PI - phi) / 2)), v_r);
 //    std::cout << angle << ", " << v_ty << v_r << ", " << std::endl;
 
-    return {v_ty, a_before, v_ty, a_after, energy};
+    return {v_ty, a_before, v_ty, a_after, energy, d_vym};
 }
 
 double EnergyCalculator::calculate_straight_line_energy(double v_in, double a_in, double v_out, double a_out, double s_tot) const {

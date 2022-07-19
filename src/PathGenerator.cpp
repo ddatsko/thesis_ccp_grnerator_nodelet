@@ -80,6 +80,7 @@ namespace path_generation {
             return true;
         }
         m_drones_altitude = req.drones_altitude;
+        m_unique_altitude_step = req.unique_altitude_step;
 
         point_t gps_transform_origin{req.fly_zone.points.front().x, req.fly_zone.points.front().y};
         // Convert the area from message to custom MapPolygon type
@@ -148,7 +149,7 @@ namespace path_generation {
         EnergyCalculator energy_calculator{energy_config};
         auto starting_point = gps_coordinates_to_meters({req.start_lat, req.start_lon}, gps_transform_origin);
 
-        mstsp_solver::SolverConfig solver_config{req.rotations_per_cell, req.sweeping_step, starting_point, req.number_of_drones};
+        mstsp_solver::SolverConfig solver_config{req.rotations_per_cell, req.sweeping_step, starting_point, req.number_of_drones, m_drones_altitude, m_unique_altitude_step};
         mstsp_solver::MstspSolver solver(solver_config, polygons_decomposed, energy_calculator,
                                          shortest_path_calculator);
 
@@ -166,6 +167,8 @@ namespace path_generation {
         res.paths_gps.resize(solver_res.size());
         res.energy_consumptions.resize(solver_res.size());
         for (size_t i = 0; i < solver_res.size(); ++i) {
+            solver_res[i].erase(solver_res[i].begin(), solver_res[i].begin() + 2);
+
             res.paths_gps[i].header.frame_id = "latlon_origin";
             res.energy_consumptions[i] = energy_calculator.calculate_path_energy_consumption(remove_path_heading(solver_res[i]));
 
@@ -216,8 +219,8 @@ namespace path_generation {
             auto gps_coordinates = meters_to_gps_coordinates({p.x, p.y}, gps_transform_origin);
             point_3d.reference.position.x = gps_coordinates.first;
             point_3d.reference.position.y = gps_coordinates.second;
-            point_3d.reference.position.z = m_drones_altitude;
-            point_3d.reference.heading = p.heading + M_PI_2;
+            point_3d.reference.position.z = p.z;
+            point_3d.reference.heading = -p.heading + M_PI_2;
 
 
             points.push_back(point_3d.reference);

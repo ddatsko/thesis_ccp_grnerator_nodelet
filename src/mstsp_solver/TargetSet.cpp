@@ -27,7 +27,7 @@ namespace mstsp_solver {
                                                              energy_calculator(energy_calculator),
                                                              sweeping_step(sweeping_step) {
 
-        auto thin_coverage = thin_polygon_coverage(polygon, sweeping_step, 0.5);
+        auto thin_coverage = thin_polygon_coverage(polygon, sweeping_step, 2);
         // If no thin coverage path is generated because the polygon is not thin enough, perform normal sweeping procedure
         if (thin_coverage.empty()) {
             add_rotation_angles(polygon.get_n_longest_edges_rotation_angles(number_of_edges_rotations));
@@ -44,7 +44,7 @@ namespace mstsp_solver {
     void TargetSet::add_rotation_angles(const std::vector<double> &rotation_angles) {
         for (auto angle: rotation_angles) {
             for (int i = 0; i < 2; i++) {
-                auto sweeping_path = sweeping(polygon, angle, sweeping_step, 0.5, static_cast<bool>(i));
+                auto sweeping_path = sweeping(polygon, angle, sweeping_step, 2, static_cast<bool>(i));
                 double path_energy = energy_calculator.calculate_path_energy_consumption(sweeping_path);
 
                 targets.push_back(Target{static_cast<bool>(i),

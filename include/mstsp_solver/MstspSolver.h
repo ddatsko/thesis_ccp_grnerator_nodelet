@@ -26,6 +26,7 @@ struct point_heading_t {
     point_heading_t(std::pair<T, T> p): x{p.first}, y{p.second} {};
     T x;
     T y;
+    T z;
     T heading;
 };
 
@@ -89,7 +90,7 @@ namespace mstsp_solver {
          */
         std::vector<point_t> get_path_from_targets(const std::vector<Target> &targets) const;
 
-        std::vector<point_heading_t<double>> path_with_heading(const std::vector<Target> &targets) const;
+        std::vector<point_heading_t<double>> path_with_heading(const std::vector<Target> &targets, int unique_alt_id) const;
 
         void get_g1_solution(solution_t &solution) const;
 

@@ -31,6 +31,15 @@ std::vector<point_heading_t<double>> add_path_heading(const vpdd &init, double h
     return res;
 }
 
+std::vector<point_heading_t<double>> add_path_heading(const vpdd &init, double heading, double alt) {
+    auto res = add_path_heading(init, heading);
+    for (auto &p: res) {
+        p.z = alt;
+    }
+    return res;
+}
+
+
 
 namespace mstsp_solver {
 
@@ -145,35 +154,42 @@ namespace mstsp_solver {
 
     std::vector<std::vector<point_heading_t<double>>> MstspSolver::get_drones_paths(const solution_t &solution) const {
         std::vector<std::vector<point_heading_t<double>>> res;
+        int unique_altitude_id = 0;
         for (const auto & i : solution) {
-            res.push_back(path_with_heading(i));
+            res.push_back(path_with_heading(i, unique_altitude_id++));
         }
         return res;
     }
 
     std::vector<point_t> MstspSolver::get_path_from_targets(const std::vector<Target> &targets) const {
-        return remove_path_heading(path_with_heading((targets)));
+        return remove_path_heading(path_with_heading(targets, 10));
     }
 
-    std::vector<point_heading_t<double>> MstspSolver::path_with_heading(const std::vector<Target> &targets) const {
+    std::vector<point_heading_t<double>> MstspSolver::path_with_heading(const std::vector<Target> &targets, int unique_alt_id) const {
+        auto unique_alt = m_config.sweeping_alt + (unique_alt_id + 1) * m_config.unique_alt_step;
         std::vector<point_heading_t<double>> res;
         res.emplace_back(m_config.starting_point);
+        res.front().z = unique_alt;
+
         double last_heading = 0;
-        for (const auto &target: targets) {
+        for (size_t i = 0; i < targets.size(); ++i) {
+            auto& target = targets[i];
+
+            auto traversing_alt = (i == 0) ? unique_alt : m_config.sweeping_alt;
             // Calculate the path from previous target to this one using the shortest path calculator
-            auto path_to_target = add_path_heading(m_shortest_path_calculator.shortest_path_between_points({res.back().x, res.back().y}, target.starting_point), last_heading);
-            path_to_target.pop_back();
-            path_to_target.erase(path_to_target.begin());
+            auto path_to_target = add_path_heading(m_shortest_path_calculator.shortest_path_between_points({res.back().x, res.back().y}, target.starting_point), last_heading, traversing_alt);
+//            path_to_target.pop_back();
+//            path_to_target.erase(path_to_target.begin());
 
             res.insert(res.end(), path_to_target.begin(), path_to_target.end());
 
             auto path = add_path_heading(sweeping(m_target_sets[target.target_set_index].polygon, target.rotation_angle,
-                                 m_config.sweeping_step, 0.5, target.first_line_up), target.rotation_angle);
+                                 m_config.sweeping_step, 2, target.first_line_up), target.rotation_angle, m_config.sweeping_alt);
             res.insert(res.end(), path.begin(), path.end());
             last_heading = target.rotation_angle;
         }
-        auto path_to_start = add_path_heading(m_shortest_path_calculator.shortest_path_between_points({res.back().x, res.back().y}, m_config.starting_point), last_heading);
-        path_to_start.erase(path_to_start.begin());
+        auto path_to_start = add_path_heading(m_shortest_path_calculator.shortest_path_between_points({res.back().x, res.back().y}, m_config.starting_point), last_heading, unique_alt);
+//        path_to_start.erase(path_to_start.begin());
 
         res.insert(res.end(), path_to_start.begin(), path_to_start.end());
         return res;
