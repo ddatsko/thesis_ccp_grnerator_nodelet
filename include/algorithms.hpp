@@ -12,7 +12,8 @@ struct polygon_decomposition_error: public std::runtime_error {
 
 enum decomposition_type_t {TRAPEZOIDAL_DECOMPOSITION,
                            BOUSTROPHEDON_DECOMPOSITION,
-                           BOUSTROPHEDON_WITH_CONVEX_POLYGONS};
+                           BOUSTROPHEDON_WITH_CONVEX_POLYGONS,
+                           DECOMPOSITION_TYPES_NUMBER};
 
 /*!
  * Calculate the sweeping path to cover the graph g

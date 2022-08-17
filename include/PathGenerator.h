@@ -66,8 +66,6 @@ namespace path_generation {
          */
         mrs_msgs::Path _generate_path_for_simulation_one_drone(const std::vector<point_heading_t<double>> &points_to_visit,
                                                                point_t gps_transform_origin,
-                                                               double distance_for_turning = std::numeric_limits<double>::max(),
-                                                               int max_number_of_extra_points = 0,
                                                                double optimal_speed=1,
                                                                double horizontal_acceleration=2.0);
     };

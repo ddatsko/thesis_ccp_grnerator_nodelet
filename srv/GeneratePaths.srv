@@ -4,8 +4,12 @@ geometry_msgs/Polygon[] no_fly_zones
 uint8 number_of_drones
 
 float64 sweeping_step
-float64 distance_for_turning
-int32 max_number_of_extra_points
+
+# NOTE: if the order of these values is changed, change it also in the enum definition
+# 0 for Trapezoidal decomposition
+# 1 for Boustrophedon decomposition
+# 2 for Boustrophedon decomposition with convex polygons
+uint8 decomposition_method
 
 uint16 drones_altitude
 float64 unique_altitude_step
@@ -13,6 +17,11 @@ float64 start_lat
 float64 start_lon
 float64 decomposition_rotation
 float64 max_polygon_area
+float64 end_point_x_difference
+
+# Max distance to a wall while performing sweeping
+# (the path makes turn if less wall_distance meters is left to the wall while looking FORWARD (not to the nearest wall)
+float64 wall_distance
 
 uint8 rotations_per_cell
 uint16 no_improvement_cycles_before_stop

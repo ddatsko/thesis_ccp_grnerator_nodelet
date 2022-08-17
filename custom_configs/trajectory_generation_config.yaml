@@ -53,13 +53,13 @@ fallback_sampling:
   first_waypoint_additional_stop: false
 
 # optimizer parameters, usually left alone
-time_penalty: 100
-soft_constraints_enabled: true
+time_penalty: 600
+soft_constraints_enabled: false
 soft_constraints_weight: 1.5
 time_allocation: 2 # method, 2 = Mellinger
 equality_constraint_tolerance: 1.0e-3
 inequality_constraint_tolerance: 0.1
-max_iterations: 10
+max_iterations: 25
 derivative_to_optimize: 0
 
 scope_timer:

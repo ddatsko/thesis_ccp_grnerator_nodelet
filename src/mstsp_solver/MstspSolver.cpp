@@ -45,14 +45,14 @@ namespace mstsp_solver {
 
     MstspSolver::MstspSolver(SolverConfig config, const std::vector<MapPolygon> &decomposed_polygons,
                              const EnergyCalculator &energy_calculator,
-                             const ShortestPathCalculator &shortest_path_calculator) : m_config(std::move(config)),
+                             ShortestPathCalculator shortest_path_calculator) : m_config(std::move(config)),
                                                                                        m_energy_calculator(
                                                                                                energy_calculator),
-                                                                                       m_shortest_path_calculator(
-                                                                                               shortest_path_calculator) {
+                                                                                       m_shortest_path_calculator(std::move(
+                                                                                               shortest_path_calculator)) {
 
         for (size_t i = 0; i < decomposed_polygons.size(); ++i) {
-            m_target_sets.emplace_back(i, decomposed_polygons[i], m_config.sweeping_step, m_energy_calculator,
+            m_target_sets.emplace_back(i, decomposed_polygons[i], m_config.sweeping_step, m_config.wall_distance, m_energy_calculator,
                                        m_config.rotations_per_cell);
         }
     }
@@ -166,30 +166,33 @@ namespace mstsp_solver {
     }
 
     std::vector<point_heading_t<double>> MstspSolver::path_with_heading(const std::vector<Target> &targets, int unique_alt_id) const {
-        auto unique_alt = m_config.sweeping_alt + (unique_alt_id + 1) * m_config.unique_alt_step;
+        double unique_alt = m_config.sweeping_step;
+        if (unique_alt_id % 2 == 0) {
+            unique_alt = m_config.sweeping_alt + ((unique_alt_id / 2) + 1) * m_config.unique_alt_step;
+        } else {
+            unique_alt = m_config.sweeping_alt - ((unique_alt_id - 1) / 2 + 1) * m_config.unique_alt_step;
+        }
+        
         std::vector<point_heading_t<double>> res;
         res.emplace_back(m_config.starting_point);
         res.front().z = unique_alt;
 
         double last_heading = 0;
-        for (size_t i = 0; i < targets.size(); ++i) {
-            auto& target = targets[i];
-
-            auto traversing_alt = (i == 0) ? unique_alt : m_config.sweeping_alt;
+        for (const auto & target : targets) {
             // Calculate the path from previous target to this one using the shortest path calculator
-            auto path_to_target = add_path_heading(m_shortest_path_calculator.shortest_path_between_points({res.back().x, res.back().y}, target.starting_point), last_heading, traversing_alt);
-//            path_to_target.pop_back();
-//            path_to_target.erase(path_to_target.begin());
+            auto path_to_target = add_path_heading(m_shortest_path_calculator.shortest_path_between_points({res.back().x, res.back().y}, target.starting_point), last_heading, unique_alt);
+            path_to_target.pop_back();
+            path_to_target.erase(path_to_target.begin());
 
             res.insert(res.end(), path_to_target.begin(), path_to_target.end());
 
             auto path = add_path_heading(sweeping(m_target_sets[target.target_set_index].polygon, target.rotation_angle,
-                                 m_config.sweeping_step, 2, target.first_line_up), target.rotation_angle, m_config.sweeping_alt);
+                                 m_config.sweeping_step, m_config.wall_distance, target.first_line_up), target.rotation_angle, m_config.sweeping_alt);
             res.insert(res.end(), path.begin(), path.end());
             last_heading = target.rotation_angle;
         }
         auto path_to_start = add_path_heading(m_shortest_path_calculator.shortest_path_between_points({res.back().x, res.back().y}, m_config.starting_point), last_heading, unique_alt);
-//        path_to_start.erase(path_to_start.begin());
+        path_to_start.erase(path_to_start.begin());
 
         res.insert(res.end(), path_to_start.begin(), path_to_start.end());
         return res;
@@ -295,7 +298,7 @@ namespace mstsp_solver {
             }
             // TODO: check if the commented line ie needed
             //g1_score += m_config.p1;
-            if (no_improvement_iteration >= 500) {
+            if (no_improvement_iteration >= m_config.max_not_improving_iterations) {
                 stop_criteria = true;
             }
         }

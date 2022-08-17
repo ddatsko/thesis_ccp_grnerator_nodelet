@@ -58,6 +58,15 @@ namespace mstsp_solver {
     using solution_t = std::vector<std::vector<Target>>;
 
     class MstspSolver {
+
+    public:
+        MstspSolver(SolverConfig config,
+                    const std::vector<MapPolygon> &decomposed_polygons,
+                    const EnergyCalculator &energy_calculator,
+                    ShortestPathCalculator shortest_path_calculator);
+
+        std::vector<std::vector<point_heading_t<double>>> solve() const;
+
     private:
         std::vector<TargetSet> m_target_sets;
         const SolverConfig m_config;
@@ -105,13 +114,7 @@ namespace mstsp_solver {
         void find_best_targets_for_position(solution_t &solution, size_t uav1, size_t path_index_1,
                                               size_t uav2, size_t path_index_2) const;
 
-    public:
-        MstspSolver(SolverConfig config,
-                    const std::vector<MapPolygon> &decomposed_polygons,
-                    const EnergyCalculator &energy_calculator,
-                    const ShortestPathCalculator &shortest_path_calculator);
 
-        std::vector<std::vector<point_heading_t<double>>> solve() const;
     };
 }
 

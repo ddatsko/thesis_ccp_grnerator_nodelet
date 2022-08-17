@@ -13,7 +13,7 @@ namespace {
     const std::string FLY_ZONE_PLACEMARK_NAME = "fly-zone";
     const std::string NO_FLY_ZONE_PLACEMARK_NAME = "no-fly-zone";
 
-    const double SPLIT_BIN_SEARCH_THRESH = 1e-3;
+    const double SPLIT_BIN_SEARCH_THRESH = 1;
 
     point_t string_to_point(const std::string &point_string) {
         size_t coma_pos;
@@ -26,6 +26,24 @@ namespace {
         }
         return point;
     }
+
+    double get_mean_x(const polygon_t &pol) {
+        double res = pol[0].first;
+        for (size_t i = 1; i < pol.size(); ++i) {
+            res += pol[i].first;
+        }
+        return res / pol.size();
+    }
+
+    std::pair<double, double> get_leftmost_rightmost(const vpdd &pol) {
+        double rightmost_x = std::numeric_limits<double>::lowest(), leftmost_x = std::numeric_limits<double>::max();
+        for (const auto &p: pol) {
+            rightmost_x = std::max(rightmost_x, p.first);
+            leftmost_x = std::min(leftmost_x, p.first);
+        }
+        return {leftmost_x, rightmost_x};
+    }
+
 }
 
 MapPolygon::polygon_t get_points_from_string(std::string kml_file_string) {
@@ -245,7 +263,7 @@ void MapPolygon::make_pure_convex() {
 
 
 std::pair<MapPolygon, MapPolygon> MapPolygon::split_by_vertical_line(double x) {
-    make_pure_convex();
+//    make_pure_convex();
     make_polygon_clockwise(fly_zone_polygon_points);
     auto fly_zone_copy = fly_zone_polygon_points;
     std::vector<std::pair<double, double>> new_pol[2];
@@ -286,7 +304,7 @@ std::pair<MapPolygon, MapPolygon> MapPolygon::split_by_vertical_line(double x) {
         };
 
     // Place the polygon on the left to the left
-    if (rightmost_x[0] < rightmost_x[1]) {
+    if (get_mean_x(new_pol[0]) < get_mean_x(new_pol[1])) {
         res.first.fly_zone_polygon_points = new_pol[0];
         res.second.fly_zone_polygon_points = new_pol[1];
     } else {
@@ -304,37 +322,44 @@ std::vector<MapPolygon> MapPolygon::split_into_pieces(double max_piece_area) {
         return {*this};
     }
     make_polygon_clockwise(fly_zone_polygon_points);
-    
-    int res_polygons = std::ceil(area() / max_piece_area);
-    double split_piece_area = area() / res_polygons;
-    auto cur_polygon = *this;
-    std::vector<MapPolygon> res;
-    double rightmost_x = std::numeric_limits<double>::min(), leftmost_x = std::numeric_limits<double>::max();
-    for (const auto &p: fly_zone_polygon_points) {
-        rightmost_x = std::max(rightmost_x, p.first);
-        leftmost_x = std::min(leftmost_x, p.first);
-    }
 
-    for (int i = 0; i < res_polygons - 1; ++i) {
-        // Using bin-search find the appropriate vertical line
-        double l = leftmost_x, r = rightmost_x;
-        while (r - l > SPLIT_BIN_SEARCH_THRESH) {
-            double m = (r + l) / 2;
-            auto line_split = cur_polygon.split_by_vertical_line(m);
-            if (line_split.first.area() < split_piece_area) {
-                l = m;
-            } else {
-                r = m;
-            }
+    try {
+        for (const auto &p: fly_zone_polygon_points) {
+            std::cout << p.first << ", " << p.second << std::endl;
         }
-        // Take a piece from the left and continue the algorithm
-        auto best_split = cur_polygon.split_by_vertical_line(l);
-        res.push_back(best_split.first);
-        cur_polygon = best_split.second;
-        leftmost_x = l;
+
+
+        int res_polygons = std::ceil(area() / max_piece_area);
+        double split_piece_area = area() / res_polygons;
+        auto cur_polygon = *this;
+        std::vector<MapPolygon> res;
+
+
+        for (int i = 0; i < res_polygons - 1; ++i) {
+            double leftmost_x, rightmost_x;
+            std::tie(leftmost_x, rightmost_x) = get_leftmost_rightmost(cur_polygon.fly_zone_polygon_points);
+            // Using bin-search find the appropriate vertical line
+            double l = leftmost_x, r = rightmost_x;
+            while (r - l > SPLIT_BIN_SEARCH_THRESH) {
+                double m = (r + l) / 2;
+                auto line_split = cur_polygon.split_by_vertical_line(m);
+                if (line_split.first.area() < split_piece_area) {
+                    l = m;
+                } else {
+                    r = m;
+                }
+            }
+            // Take a piece from the left and continue the algorithm
+            auto best_split = cur_polygon.split_by_vertical_line(l);
+            res.push_back(best_split.first);
+            cur_polygon = best_split.second;
+        }
+        res.push_back(cur_polygon);
+        return res;
+    } catch (std::runtime_error &e) {
+        ROS_ERROR_STREAM("[PathGenerator]: ERROR while dividing polygon: " << e.what());
     }
-    res.push_back(cur_polygon);
-    return res;
+    return {};
 }
 
 point_t MapPolygon::leftmost_point() const {

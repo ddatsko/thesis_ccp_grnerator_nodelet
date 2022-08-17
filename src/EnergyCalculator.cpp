@@ -3,11 +3,12 @@
 #include <algorithm>
 #include <iostream>
 #include "utils.hpp"
+#include <ros/ros.h>
 
 namespace {
     const double AIR_DENSITY = 1.225; // [kg/m^3]
     const double EARTH_GRAVITY = 9.8; //[m/s^2, N/kg]
-    const double PROPELLER_EFFICIENCY = 0.54; // Usually from 0.5 to 0.7
+    const double PROPELLER_EFFICIENCY = 0.45; // Usually from 0.5 to 0.7
     const double RANGE_POWER_CONSUMPTION_COEFF = 1.092; // taken from (17), ratio of power consumption when maximizing the range to power consumption on hover
     const double MOTOR_EFFICIENCY = 0.75; // Efficiency of the motor (ratio of electric power converted to mechanical)
 
@@ -63,7 +64,7 @@ EnergyCalculator::EnergyCalculator(const energy_calculator_config_t &energy_calc
 
     v_r = v_i_h / v_r_inv;
 
-    std::cout << "ENERGY CALCULATOR: Optimal speed: " << v_r << "Time of flight: " << t_r << std::endl;
+    ROS_INFO_STREAM("[PathGenerator]: ENERGY CALCULATOR: Optimal speed: " << v_r << "Time of flight: " << t_r);
 }
 
 turning_properties_t EnergyCalculator::calculate_turning_properties(double angle) const {
@@ -83,16 +84,12 @@ turning_properties_t EnergyCalculator::calculate_turning_properties(double angle
     double omega_acc = std::asin(d_vy / std::sqrt(d_vx * d_vx + d_vy * d_vy));
     double a_before = -config.average_acceleration * std::sin(omega_acc);
     double a_after = config.average_acceleration * std::cos(omega_acc + (M_PI_2 - phi));
-
-
     double v_tx = std::min(d_vx / 2, std::sqrt(2 * config.allowed_path_deviation * config.average_acceleration * std::cos(omega_acc)));
     double v_ty = v_tx / std::tan((M_PI - angle) / 2);
 
-    double energy = config.drone_mass * 0.5 * (std::pow(d_vx, 2) + std::pow(v_r, 2) - std::pow(v_r - d_vy, 2));
+    double energy = config.drone_mass * 0.5 * (std::pow(d_vx, 2) + std::pow(d_vy, 2));
 
-    // TODO: it seems, there may be an error here
     double d_vym = std::min(v_ty + (v_tx * cot((M_PI - phi) / 2)), v_r);
-//    std::cout << angle << ", " << v_ty << v_r << ", " << std::endl;
 
     return {v_ty, a_before, v_ty, a_after, energy, d_vym};
 }

@@ -177,6 +177,11 @@ vpdd sweeping(const MapPolygon &polygon, double angle, double sweeping_step, dou
             auto intersection = segment_vertical_line_intersection(segment, current_x);
             intersection_ys.insert(intersection.second);
         }
+
+        // If at some point the vertical line crosses 3 segments of the sub-polygon - say that sweeping in this sub polygon is infeasible
+        if (intersection_ys.size() >= 3) {
+            return {};
+        }
         if (intersection_ys.size() <= 1) {
             if (last_one) {
                 break;
