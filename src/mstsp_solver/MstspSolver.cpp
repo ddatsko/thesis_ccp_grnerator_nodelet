@@ -200,7 +200,7 @@ namespace mstsp_solver {
 
 
 
-    std::vector<std::vector<point_heading_t<double>>> MstspSolver::solve() const {
+    std::pair<double, std::vector<std::vector<point_heading_t<double>>>> MstspSolver::solve() const {
         ROS_INFO_STREAM("[PathGenerator]: Solving started");
         solution_t init_solution = greedy_random();
         size_t nodes = 0;
@@ -302,7 +302,7 @@ namespace mstsp_solver {
                 stop_criteria = true;
             }
         }
-        return get_drones_paths(final_solution);
+        return {best_solution_cost.path_cost_sum, get_drones_paths(final_solution)};
     }
 
 

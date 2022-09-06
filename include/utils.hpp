@@ -9,6 +9,12 @@ using hom_t = std::tuple<double, double, double>;
 
 hom_t cross_product(const hom_t &a, const hom_t &b);
 
+
+enum decomposition_type_t {TRAPEZOIDAL_DECOMPOSITION,
+    BOUSTROPHEDON_DECOMPOSITION,
+    BOUSTROPHEDON_WITH_CONVEX_POLYGONS,
+    DECOMPOSITION_TYPES_NUMBER};
+
 /*!
  * Get the point of intersection of a segment and lone
  * @param p1 segment point 1

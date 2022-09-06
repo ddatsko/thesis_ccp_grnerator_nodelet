@@ -53,7 +53,7 @@ fallback_sampling:
   first_waypoint_additional_stop: false
 
 # optimizer parameters, usually left alone
-time_penalty: 600
+time_penalty: 500
 soft_constraints_enabled: false
 soft_constraints_weight: 1.5
 time_allocation: 2 # method, 2 = Mellinger

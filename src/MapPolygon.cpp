@@ -267,7 +267,7 @@ std::pair<MapPolygon, MapPolygon> MapPolygon::split_by_vertical_line(double x) {
     make_polygon_clockwise(fly_zone_polygon_points);
     auto fly_zone_copy = fly_zone_polygon_points;
     std::vector<std::pair<double, double>> new_pol[2];
-    double rightmost_x[2] = {std::numeric_limits<double>::min(), std::numeric_limits<double>::min()};
+    double rightmost_x[2] = {std::numeric_limits<double>::lowest(), std::numeric_limits<double>::lowest()};
 
 
     // Iterate through each segment, detecting crossing of the vertical line
@@ -324,9 +324,9 @@ std::vector<MapPolygon> MapPolygon::split_into_pieces(double max_piece_area) {
     make_polygon_clockwise(fly_zone_polygon_points);
 
     try {
-        for (const auto &p: fly_zone_polygon_points) {
-            std::cout << p.first << ", " << p.second << std::endl;
-        }
+//        for (const auto &p: fly_zone_polygon_points) {
+//            std::cout << p.first << ", " << p.second << std::endl;
+//        }
 
 
         int res_polygons = std::ceil(area() / max_piece_area);
@@ -370,7 +370,7 @@ point_t MapPolygon::leftmost_point() const {
 
 point_t MapPolygon::rightmost_point() const {
     return std::reduce(fly_zone_polygon_points.begin(), fly_zone_polygon_points.end(),
-                       std::make_pair(std::numeric_limits<double>::min(), std::numeric_limits<double>::min()),
+                       std::make_pair(std::numeric_limits<double>::lowest(), std::numeric_limits<double>::lowest()),
                        [](const auto &p1, const auto &p2){return p1.first < p2.first ? p2 : p1;});
 }
 
@@ -382,9 +382,113 @@ std::optional<double> MapPolygon::is_thinner_than_rotation(double width) const {
         auto rotated_polygon = rotated(segment_rotation);
 
         if ((rotated_polygon.rightmost_point().first - rotated_polygon.leftmost_point().first) < width) {
-            std::cout << "THin polygon found" << std::endl;
+            std::cout << "Thin polygon found" << std::endl;
             return segment_rotation;
         }
     }
     return std::nullopt;
+}
+
+double MapPolygon::height() const {
+    double highest_y = std::numeric_limits<double>::lowest();
+    double lowest_y = std::numeric_limits<double>::max();
+
+    // Assuming that no no-fly zone is located outside the fly-zone
+    for (const auto &p: fly_zone_polygon_points) {
+        highest_y = std::max(highest_y, p.second);
+        lowest_y = std::min(lowest_y, p.second);
+    }
+    return highest_y - lowest_y;
+}
+
+
+
+namespace {
+    std::optional<double> max_piece_area_for_number(std::vector<MapPolygon> &sub_polygons, size_t n) {
+        if (n <= sub_polygons.size()) {
+            return std::nullopt;
+        }
+
+        // Using the binary search, find the max piece area, corresponding to the optimal decomposition
+        double largest_area = 0;
+        for (const auto &pol: sub_polygons) {
+            largest_area = std::max(largest_area, pol.area());
+        }
+        double l = 0, r = largest_area;
+        auto current_num_of_pols = sub_polygons.size();
+        while (r - l > 1 and current_num_of_pols != n) {
+            double m = (r + l) / 2;
+            size_t number_of_decomposed = 0;
+            for (auto &pol: sub_polygons) {
+                number_of_decomposed += pol.split_into_pieces(m).size();
+            }
+            current_num_of_pols = number_of_decomposed;
+            if (number_of_decomposed > n) {
+                l = m;
+            } else if (number_of_decomposed < n) {
+                r = m;
+            }
+        }
+        return (r + l) / 2;
+    }
+}
+
+std::vector<MapPolygon> split_into_number(std::vector<MapPolygon> &sub_polygons, size_t n) {
+    if (n <= sub_polygons.size()) {
+        return sub_polygons;
+    }
+
+    // TODO: check if a better algorithm is needed here
+    auto area = max_piece_area_for_number(sub_polygons, n);
+    if (!area.has_value()) {
+        return sub_polygons;
+    }
+
+    std::vector<MapPolygon> res;
+    for (auto &p: sub_polygons) {
+        auto decomposed = p.split_into_pieces(area.value());
+        res.insert(res.end(), decomposed.begin(), decomposed.end());
+    }
+    return res;
+}
+
+namespace {
+    double get_decomposition_cost(const std::vector<MapPolygon> &decomposition) {
+        double res = 0;
+        for (const auto &pol: decomposition) {
+            res += pol.height();
+        }
+        return res;
+    }
+}
+
+
+std::vector<double> n_best_init_decomp_angles(const MapPolygon &m, int n, decomposition_type_t decomposition_type, double angle_eps) {
+    std::vector<std::pair<double, double>> angles_costs;
+
+    // Iterate through the angle of each polygon edge and try to find the best one
+    for (auto &e: m.get_all_segments()) {
+        auto rotation = -get_segment_rotation(e);
+        auto decomp = trapezoidal_decomposition(m.rotated(rotation), decomposition_type);
+        angles_costs.emplace_back(get_decomposition_cost(decomp), rotation - M_PI_2 + 0.01);
+    }
+
+    std::sort(angles_costs.begin(), angles_costs.end());
+    std::vector<double> res;
+
+    for (size_t i = 0; i < std::min(static_cast<size_t>(n), angles_costs.size()); ++i) {
+        bool is_close = false;
+        for (const auto &angle: res) {
+            if (std::abs(angle - angles_costs[i].second) < angle_eps) {
+                is_close = true;
+                break;
+            }
+        }
+        if (is_close) {
+            ++n;
+            continue;
+        }
+        res.push_back(angles_costs[i].second);
+    }
+    return res;
 }

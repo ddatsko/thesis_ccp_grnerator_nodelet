@@ -65,7 +65,12 @@ namespace mstsp_solver {
                     const EnergyCalculator &energy_calculator,
                     ShortestPathCalculator shortest_path_calculator);
 
-        std::vector<std::vector<point_heading_t<double>>> solve() const;
+        /*!
+         * produce the solution of entire problem
+         * @return pair of solution cost and solution itself in a form of vector of paths where each path
+         * is a sequence of waypoints with heading
+         */
+        std::pair<double, std::vector<std::vector<point_heading_t<double>>>> solve() const;
 
     private:
         std::vector<TargetSet> m_target_sets;

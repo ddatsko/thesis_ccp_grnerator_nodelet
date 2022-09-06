@@ -10,11 +10,6 @@ struct polygon_decomposition_error: public std::runtime_error {
     using runtime_error::runtime_error;
 };
 
-enum decomposition_type_t {TRAPEZOIDAL_DECOMPOSITION,
-                           BOUSTROPHEDON_DECOMPOSITION,
-                           BOUSTROPHEDON_WITH_CONVEX_POLYGONS,
-                           DECOMPOSITION_TYPES_NUMBER};
-
 /*!
  * Calculate the sweeping path to cover the graph g
  * NOTE: If the area to cover is not a convex polygon, the algorithm will produce not a full coverage path

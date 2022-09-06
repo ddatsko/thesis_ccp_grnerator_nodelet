@@ -14,7 +14,7 @@ constraint_management:
   # and the current gains are not in the allowed list (next paragraphs)
   fallback_constraints:
     RTK: "slow"
-    GPS: "slow"
+    GPS: "medium"
 
 slow:
 
@@ -54,8 +54,8 @@ slow:
 medium:
 
   horizontal:
-    speed: 10.0
-    acceleration: 1.5
+    speed: 8.0
+    acceleration: 2
     jerk: 20.0
     snap: 20.0
 

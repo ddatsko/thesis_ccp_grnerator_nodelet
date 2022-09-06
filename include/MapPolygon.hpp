@@ -9,6 +9,7 @@
 #include <set>
 #include <map>
 #include "custom_types.hpp"
+#include "utils.hpp"
 
 
 
@@ -128,8 +129,30 @@ struct MapPolygon {
      * @return the rotation that should be applied to po
      */
     [[nodiscard]] std::optional<double> is_thinner_than_rotation(double width) const;
+
+    [[nodiscard]] double height() const;
+
 };
 
+
+/*!
+ * Split polygons into the at least specified number of smaller ones
+ * @param sub_polygons Initial sub polygons after decomposition
+ * @param n Minimum number of polygons after the decomposition
+ * @return Decomposed polygons
+ */
+std::vector<MapPolygon> split_into_number(std::vector<MapPolygon> &sub_polygons, size_t n);
+
+
+/*!
+ * Get at most n rotations that are assumed to be best
+ * @param m Initial not decomposed polygon
+ * @param n Maximum number of angled
+ * @param decomposition_type type of decomposition used
+ * @param angle_eps Epsilon up to which consider the angles to be the same (to prevent a couple of very similar ones)
+ * @return
+ */
+std::vector<double> n_best_init_decomp_angles(const MapPolygon &m, int n, decomposition_type_t decomposition_type, double angle_eps=0.1);
 
 
 #endif //MAP_TO_GRAPH_MAPPOLYGON_HPP
