@@ -31,7 +31,7 @@ std::pair<double, double> segment_line_intersection(const std::pair<double, doub
  * Get the point, obtained by rotating the point p counter clockwise by angle
  * @param angle Angle of the counter clockwise point rotation
  * @param p Point to be rotated in the representation {x, y}
- * @return Points obrained by rotation
+ * @return Points obtained by rotation
  */
 point_t rotate_point(point_t p, double angle);
 

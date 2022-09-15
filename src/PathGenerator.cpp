@@ -14,7 +14,7 @@
 #include "mstsp_solver/SolverConfig.h"
 #include "mstsp_solver/MstspSolver.h"
 
-#include <thesis_path_generator/GeneratePaths.h>
+#include "thesis_path_generator/GeneratePaths.h"
 
 namespace path_generation {
 
@@ -84,6 +84,7 @@ namespace path_generation {
         m_unique_altitude_step = req.unique_altitude_step;
 
         point_t gps_transform_origin{req.fly_zone.points.front().x, req.fly_zone.points.front().y};
+
         // Convert the area from message to custom MapPolygon type
         MapPolygon polygon;
         std::for_each(req.fly_zone.points.begin(), req.fly_zone.points.end(), [&](const auto &p){polygon.fly_zone_polygon_points.push_back(gps_coordinates_to_meters({p.x, p.y}, gps_transform_origin));});
@@ -94,13 +95,12 @@ namespace path_generation {
             make_polygon_clockwise(polygon.no_fly_zone_polygons[polygon.no_fly_zone_polygons.size() - 1]);
         }
 
-
+        // Override UAV and battery parameters if it is stated to do so in request
         energy_calculator_config_t energy_config = m_energy_config;
         if (req.override_battery_model) {
             energy_config.battery_model.cell_capacity = req.battery_cell_capacity;
             energy_config.battery_model.number_of_cells = req.battery_number_of_cells;
         }
-
         if (req.override_drone_parameters) {
             ROS_INFO("[PathGenerator] Overriding UAV parameters");
             energy_config.drone_area = req.drone_area;
@@ -110,26 +110,28 @@ namespace path_generation {
             energy_config.propeller_radius = req.propeller_radius;
         }
 
+        // Create the energy calculator from user-defines parameters
+        EnergyCalculator energy_calculator{energy_config};
 
         // Decompose the polygon
         ShortestPathCalculator shortest_path_calculator(polygon);
 
         if (req.decomposition_method >= static_cast<uint8_t>(DECOMPOSITION_TYPES_NUMBER)) {
             ROS_ERROR_STREAM("[PathGenerator]: Wrong decomposition method chosen");
+            res.message = "Wrong decomposition method";
             return true;
         }
 
         auto init_polygon = polygon;
-        // TODO: make a parameter taken from message here
+        // TODO: make a parameter taken from message here as it directly influences the computation time
         auto best_initial_rotations = n_best_init_decomp_angles(polygon, 7, static_cast<decomposition_type_t>(req.decomposition_method));
 
+
+        // Run algorithm for each rotation and save the best result
         double best_solution_cost = std::numeric_limits<double>::max();
         std::vector<std::vector<point_heading_t<double>>> best_solution;
-
-        EnergyCalculator energy_calculator{energy_config};
-
         for (const auto &rotation: best_initial_rotations) {
-
+            // Decompose polygon using initial rotation
             polygon = init_polygon.rotated(rotation);
             std::vector<MapPolygon> polygons_decomposed;
             try {
@@ -147,22 +149,21 @@ namespace path_generation {
                 ROS_INFO_STREAM("[PathGenerator] Decomposed sub polygon area: " << p.area());
             }
 
-//        std::for_each(polygons_decomposed.begin(), polygons_decomposed.end(), [&](MapPolygon &p){p = p.rotated(-req.decomposition_rotation);});
+            // Rotate the polygon back to initial state
             polygon = polygon.rotated(-rotation);
 
+            // Divide large polygons into smaller ones to meet the constraint on the lowest number of sub polygons
             ROS_INFO_STREAM("[PathGenerator]: Dividing large polygons into smaller ones");
             auto polygons_divided = split_into_number(polygons_decomposed,
                                                       req.number_of_drones * req.min_sub_polygons_per_uav);
             for (auto &p: polygons_divided) {
                 p = p.rotated(-rotation);
             }
-
-
             polygons_decomposed = polygons_divided;
             ROS_INFO_STREAM("[PathGenerator]: Divided large polygons into smaller ones");
 
+            // Create the configuration for MSTSP solver
             auto starting_point = gps_coordinates_to_meters({req.start_lat, req.start_lon}, gps_transform_origin);
-
             mstsp_solver::SolverConfig solver_config{req.rotations_per_cell, req.sweeping_step, starting_point,
                                                      req.number_of_drones, m_drones_altitude, m_unique_altitude_step,
                                                      req.no_improvement_cycles_before_stop};
@@ -174,6 +175,7 @@ namespace path_generation {
 
             auto solver_res = solver.solve();
 
+            // Change the best solution if the current one is better
             if (solver_res.first < best_solution_cost) {
                 best_solution_cost = solver_res.first;
                 best_solution = solver_res.second;
@@ -181,13 +183,13 @@ namespace path_generation {
             }
         }
 
-
         // Modify the finishing coordinate to prevent drones from collision at the end.
         // TODO: move it to planner directly to prevent any enterings of no-fly zones while travelling to the end point
         for (size_t i = 0; i < best_solution.size(); ++i) {
             best_solution[i].back().x += static_cast<double>(i) * req.end_point_x_difference;
         }
 
+        // Make up a response
         res.success = true;
         res.paths_gps.resize(best_solution.size());
         res.energy_consumptions.resize(best_solution.size());
@@ -195,10 +197,10 @@ namespace path_generation {
             res.paths_gps[i].header.frame_id = "latlon_origin";
             res.energy_consumptions[i] = energy_calculator.calculate_path_energy_consumption(remove_path_heading(best_solution[i]));
 
+            // Convert each path to Path message in "latlon_origin" frame
             auto generated_path = _generate_path_for_simulation_one_drone(best_solution[i], gps_transform_origin,
                                                                           energy_calculator.get_optimal_speed(),
                                                                           energy_config.average_acceleration);
-
             res.paths_gps[i] = generated_path;
         }
 
@@ -236,6 +238,7 @@ namespace path_generation {
 
         std::vector<mrs_msgs::Reference> points;
 
+        // Convert each point back to "latlon_origin" considering the origin point
         for (auto p: points_to_visit) {
             mrs_msgs::ReferenceStamped point_3d;
             point_3d.header.frame_id = "latlon_origin";
@@ -244,8 +247,10 @@ namespace path_generation {
             point_3d.reference.position.x = gps_coordinates.first;
             point_3d.reference.position.y = gps_coordinates.second;
             point_3d.reference.position.z = p.z;
-            point_3d.reference.heading = -p.heading + M_PI_2;
+            ROS_INFO_STREAM("Setting heading to " << -p.heading + M_PI_2);
 
+            // Modify the heading to match the sweeping direction after conversion back to "gps_origin"  of a UAV
+            point_3d.reference.heading = -p.heading + M_PI_2;
 
             points.push_back(point_3d.reference);
         }

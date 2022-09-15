@@ -11,7 +11,7 @@ windows:
   - gazebo:
       layout: tiled
       panes:
-        - waitForRos; sleep 5; roslaunch mrs_simulation simulation.launch world_file:='$(find thesis_path_generator)/custom_worlds/camp_field/grass_plane.world' gui:=true
+        - waitForRos; sleep 5; roslaunch mrs_simulation simulation.launch world_file:='$(find thesis_path_generator)/custom_worlds/ostrov/grass_plane.world' gui:=true
         - waitForOdometry; gz camera -c gzclient_camera -f ${UAV_NAME}; history -s gz camera -c gzclient_camera -f ${UAV_NAME}
   - status:
       layout: tiled
@@ -24,7 +24,7 @@ windows:
   - control:
       layout: tiled
       panes:
-        - waitForOdometry; roslaunch mrs_uav_general core.launch WORLD_FILE:='$(find thesis_path_generator)/custom_worlds/camp_field/world_simulation.yaml' config_trajectory_generation:=$(echo `pwd`/../../custom_configs/trajectory_generation_config.yaml) config_constraint_manager:=$(echo `pwd`/../../custom_configs/constraint_manager.yaml)
+        - waitForOdometry; roslaunch mrs_uav_general core.launch WORLD_FILE:='$(find thesis_path_generator)/custom_worlds/ostrov/world_simulation.yaml' config_trajectory_generation:=$(echo `pwd`/../../custom_configs/trajectory_generation_config.yaml) config_constraint_manager:=$(echo `pwd`/../../custom_configs/constraint_manager.yaml)
   - takeoff:
       layout: tiled
       panes:
@@ -50,6 +50,10 @@ windows:
       layout: tiled
       panes:
         - 'waitForControl; sleep 5; roslaunch path_follower path_follower.launch'
+  - toppra:
+      layout: tiled
+      panes:
+        - 'waitForControl; sleep 5; roslaunch toppra_trajectory_generation toppra_trajectory_generation.launch'
   - layout:
       layout: tiled
       panes:

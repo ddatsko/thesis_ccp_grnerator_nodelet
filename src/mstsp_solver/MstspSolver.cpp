@@ -5,7 +5,6 @@
 #include "mstsp_solver/MstspSolver.h"
 #include <utility>
 #include "mstsp_solver/Insertion.h"
-#include <cstdlib>
 #include "algorithms.hpp"
 #include <iostream>
 #include <algorithm>

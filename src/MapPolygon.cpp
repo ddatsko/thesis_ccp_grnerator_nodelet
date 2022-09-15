@@ -324,10 +324,6 @@ std::vector<MapPolygon> MapPolygon::split_into_pieces(double max_piece_area) {
     make_polygon_clockwise(fly_zone_polygon_points);
 
     try {
-//        for (const auto &p: fly_zone_polygon_points) {
-//            std::cout << p.first << ", " << p.second << std::endl;
-//        }
-
 
         int res_polygons = std::ceil(area() / max_piece_area);
         double split_piece_area = area() / res_polygons;

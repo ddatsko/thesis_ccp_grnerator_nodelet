@@ -1,4 +1,4 @@
-#include <EnergyCalculator.h>
+#include "EnergyCalculator.h"
 #include <cmath>
 #include <algorithm>
 #include <iostream>
@@ -37,10 +37,8 @@ EnergyCalculator::EnergyCalculator(const energy_calculator_config_t &energy_calc
     double v_i_h = std::sqrt((config.drone_mass * EARTH_GRAVITY) /
                              (2 * AIR_DENSITY * M_PI * config.propeller_radius * config.propeller_radius *
                               config.number_of_propellers)); // (4)
-//    std::cout << v_i_h << std::endl;
     // Power consumption on hover
-//  double P_h = (std::sqrt(config.number_of_propellers) * config.drone_mass * EARTH_GRAVITY * v_i_h) / (PROPELLER_EFFICIENCY); // (5)
-    double P_h = std::sqrt(std::pow(config.drone_mass * EARTH_GRAVITY, 3)) / (PROPELLER_EFFICIENCY * config.propeller_radius * std::sqrt(2 * AIR_DENSITY * M_PI * config.number_of_propellers));
+    double P_h = std::sqrt(std::pow(config.drone_mass * EARTH_GRAVITY, 3)) / (PROPELLER_EFFICIENCY * config.propeller_radius * std::sqrt(2 * AIR_DENSITY * M_PI * config.number_of_propellers)); //(5)
 
     // Power consumption when maximizing the range
     P_r = P_h * RANGE_POWER_CONSUMPTION_COEFF; // (17)
@@ -158,7 +156,6 @@ double EnergyCalculator::calculate_short_line_energy(double v_in, double a_in, d
     }
 //    std::cerr << "Warning: Too short segment" << std::endl;
     return 0;
-//    return (s / ((v_in + v_out) / 2)) * P_r;
 }
 
 

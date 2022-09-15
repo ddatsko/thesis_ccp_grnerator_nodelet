@@ -33,8 +33,17 @@ namespace mstsp_solver {
                   const EnergyCalculator &energy_calculator, size_t number_of_edges_rotations);
 
     private:
+        /*!
+         * Delete all the stored nodes and add new ones, with rotation angle of each as angles
+         * @param angles sweeping angles of inserted nodes
+         */
         void set_rotation_angles(const std::vector<double>& angles);
 
+        /*!
+         * Generate 2 nodes corresponding to the given rotation angle and store it
+         * @param angle Rotation angle for sweeping
+         * @param up If the first sweep should go up
+         */
         void add_one_rotation_angle(double angle, bool up);
     };
 }

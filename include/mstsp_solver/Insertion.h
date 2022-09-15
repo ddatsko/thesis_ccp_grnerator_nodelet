@@ -8,11 +8,14 @@
 namespace mstsp_solver {
 
     struct Insertion {
-        double solution_cost;
-        size_t target_set_index;
-        size_t target_index;
-        size_t uav_index;
-        size_t insertion_index;
+        /*!
+         * Struct for storing one possible node insertion during optimization procedure
+         */
+        double solution_cost; // Solution cost if the insertion is performed
+        size_t target_set_index; // Target set of node to insert
+        size_t target_index; // Node index in target set
+        size_t uav_index; // Index of path to insert the node to
+        size_t insertion_index; // Index inside the path to insert the node
     };
 
     struct InsertionComp {

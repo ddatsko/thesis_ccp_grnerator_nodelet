@@ -22,8 +22,8 @@ struct metaheuristic_application_error: public std::runtime_error {
 template<typename T=double>
 struct point_heading_t {
     point_heading_t() = default;
-    point_heading_t(T x, T y): x{x}, y{y} {};
-    point_heading_t(std::pair<T, T> p): x{p.first}, y{p.second} {};
+    point_heading_t(T x, T y): x{x}, y{y}, z{0}, heading{0} {};
+    explicit point_heading_t(std::pair<T, T> p): x{p.first}, y{p.second}, z{0}, heading{0} {};
     T x;
     T y;
     T z;
@@ -31,6 +31,9 @@ struct point_heading_t {
 };
 
 struct solution_cost_t {
+    /*!
+     * Struct for representation the cost of one solution
+     */
     double max_path_cost;
     double path_cost_sum;
 
@@ -104,18 +107,46 @@ namespace mstsp_solver {
          */
         std::vector<point_t> get_path_from_targets(const std::vector<Target> &targets) const;
 
+        /*!
+         * Add Retrieve a path with added heading along each sweep pattern
+         * @param targets Targets of the solution in the order of visiting
+         * @param unique_alt_id Id for unique altitude during changing the sub-polygon for collision avoidance
+         * @return Path with the right heading
+         */
         std::vector<point_heading_t<double>> path_with_heading(const std::vector<Target> &targets, int unique_alt_id) const;
 
+        /*!
+         * Apply step 1: Random Shift
+         * @param solution solution to modify
+         */
         void get_g1_solution(solution_t &solution) const;
 
+        /*!
+         * Apply step 2: Best shift
+         * @param solution solution to modify
+         */
         void get_g2_solution(solution_t &solution) const;
 
+        /*!
+         * Apply step 3: Best swap
+         * @param solution solution to modify
+         */
         void get_g3_solution(solution_t &solution) const;
 
+        /*!
+         * Apply step 4: Direction change
+         * @param solution solution to modify
+         */
         void get_g4_solution(solution_t &solution) const;
 
-        void find_best_target_at_positio(solution_t &solution, size_t uav, size_t path_index);
-
+        /*!
+         * Given two nodes, select the best replacements from the same sets for them
+         * @param solution Solution to modify
+         * @param uav1 Index of path of the first node
+         * @param path_index_1 Index inside the path of the first node
+         * @param uav2 Index of path of the second node
+         * @param path_index_2 Index inside the path of the second node
+         */
         void find_best_targets_for_position(solution_t &solution, size_t uav1, size_t path_index_1,
                                               size_t uav2, size_t path_index_2) const;
 

@@ -5,7 +5,6 @@
 #include "mstsp_solver/TargetSet.h"
 #include "algorithms.hpp"
 #include <iostream>
-#include <iomanip>
 #include <algorithm>
 
 namespace mstsp_solver {

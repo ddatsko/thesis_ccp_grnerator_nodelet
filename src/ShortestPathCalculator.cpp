@@ -6,8 +6,6 @@
 #include <algorithm>
 #include "utils.hpp"
 #include <cmath>
-#include <iostream>
-#include <iomanip>
 
 namespace {
     const double EPS = 1e-5;
