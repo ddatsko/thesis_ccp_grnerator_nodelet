@@ -301,7 +301,7 @@ namespace mstsp_solver {
                 stop_criteria = true;
             }
         }
-        return {best_solution_cost.path_cost_sum, get_drones_paths(final_solution)};
+        return {best_solution_cost.max_path_cost, get_drones_paths(final_solution)};
     }
 
 

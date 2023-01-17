@@ -465,7 +465,7 @@ std::vector<double> n_best_init_decomp_angles(const MapPolygon &m, int n, decomp
     // Iterate through the angle of each polygon edge and try to find the best one
     for (auto &e: m.get_all_segments()) {
         auto rotation = -get_segment_rotation(e);
-        auto decomp = trapezoidal_decomposition(m.rotated(rotation), decomposition_type);
+        auto decomp = trapezoidal_decomposition(m.rotated(rotation - M_PI_2 + 0.01), decomposition_type);
         angles_costs.emplace_back(get_decomposition_cost(decomp), rotation - M_PI_2 + 0.01);
     }
 

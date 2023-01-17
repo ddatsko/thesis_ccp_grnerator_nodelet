@@ -247,7 +247,7 @@ namespace path_generation {
             point_3d.reference.position.x = gps_coordinates.first;
             point_3d.reference.position.y = gps_coordinates.second;
             point_3d.reference.position.z = p.z;
-            ROS_INFO_STREAM("Setting heading to " << -p.heading + M_PI_2);
+            ROS_DEBUG_STREAM("Setting heading to " << -p.heading + M_PI_2);
 
             // Modify the heading to match the sweeping direction after conversion back to "gps_origin"  of a UAV
             point_3d.reference.heading = -p.heading + M_PI_2;

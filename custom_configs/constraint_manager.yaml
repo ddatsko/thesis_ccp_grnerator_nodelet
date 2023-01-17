@@ -54,8 +54,8 @@ slow:
 medium:
 
   horizontal:
-    speed: 8.0
-    acceleration: 2
+    speed: 14.0
+    acceleration: 10
     jerk: 20.0
     snap: 20.0
 
