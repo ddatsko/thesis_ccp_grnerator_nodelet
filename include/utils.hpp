@@ -4,6 +4,7 @@
 #include <tuple>
 #include <vector>
 #include "custom_types.hpp"
+//#include "MapPolygon.hpp"
 
 using hom_t = std::tuple<double, double, double>;
 
@@ -149,6 +150,20 @@ std::pair<double, double> solve_quadratic(double a, double b, double c);
  * @return point of intersection. If point does not belong to the segment, it is still returned
  */
 point_t segment_vertical_line_intersection(const segment_t &s, double x);
+
+
+///*!
+// * Create a MapPolygon object from fly zone and no fly zones points.
+// * NOTE: this function is not in
+// * @tparam P
+// * @param fly_zone
+// * @param no_fly_zones
+// * @return
+// */
+//template <typename P>
+//MapPolygon polygon_from_boundary_points(const std::vector<P> &fly_zone, const std::vector<std::vector<P>>& no_fly_zones) {
+//
+//}
 
 #endif
 

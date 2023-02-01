@@ -30,6 +30,9 @@ float64 wall_distance
 uint8 rotations_per_cell
 uint16 no_improvement_cycles_before_stop
 
+# Maximum energy os a single path [Wh]
+float64 max_single_path_energy
+
 bool override_battery_model
 float64 battery_cell_capacity
 uint8 battery_number_of_cells

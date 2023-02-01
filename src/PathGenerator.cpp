@@ -13,8 +13,7 @@
 #include "ShortestPathCalculator.hpp"
 #include "mstsp_solver/SolverConfig.h"
 #include "mstsp_solver/MstspSolver.h"
-
-#include "thesis_path_generator/GeneratePaths.h"
+#include <thesis_path_generator/GeneratePaths.h>
 
 namespace path_generation {
 
@@ -69,8 +68,6 @@ namespace path_generation {
         m_is_initialized = true;
     }
 
-
-
     bool PathGenerator::callback_generate_paths(thesis_path_generator::GeneratePaths::Request &req,
                                                 thesis_path_generator::GeneratePaths::Response &res) {
 
@@ -86,14 +83,7 @@ namespace path_generation {
         point_t gps_transform_origin{req.fly_zone.points.front().x, req.fly_zone.points.front().y};
 
         // Convert the area from message to custom MapPolygon type
-        MapPolygon polygon;
-        std::for_each(req.fly_zone.points.begin(), req.fly_zone.points.end(), [&](const auto &p){polygon.fly_zone_polygon_points.push_back(gps_coordinates_to_meters({p.x, p.y}, gps_transform_origin));});
-        make_polygon_clockwise(polygon.fly_zone_polygon_points);
-        for (auto &no_fly_zone: req.no_fly_zones) {
-            polygon.no_fly_zone_polygons.emplace_back();
-            std::for_each(no_fly_zone.points.begin(), no_fly_zone.points.end(), [&](const auto &p) {polygon.no_fly_zone_polygons.back().push_back(gps_coordinates_to_meters({p.x, p.y}, gps_transform_origin));});
-            make_polygon_clockwise(polygon.no_fly_zone_polygons[polygon.no_fly_zone_polygons.size() - 1]);
-        }
+        MapPolygon polygon{req.fly_zone, req.no_fly_zones, gps_transform_origin};
 
         // Override UAV and battery parameters if it is stated to do so in request
         energy_calculator_config_t energy_config = m_energy_config;
@@ -112,6 +102,7 @@ namespace path_generation {
 
         // Create the energy calculator from user-defines parameters
         EnergyCalculator energy_calculator{energy_config};
+        ROS_INFO_STREAM("[PathGenerator]: Optimal speed: " << energy_calculator.get_optimal_speed());
 
         // Decompose the polygon
         ShortestPathCalculator shortest_path_calculator(polygon);
@@ -122,88 +113,39 @@ namespace path_generation {
             return true;
         }
 
-        auto init_polygon = polygon;
-        // TODO: make a parameter taken from message here as it directly influences the computation time
-        auto best_initial_rotations = n_best_init_decomp_angles(polygon, 7, static_cast<decomposition_type_t>(req.decomposition_method));
 
-
-        // Run algorithm for each rotation and save the best result
-        double best_solution_cost = std::numeric_limits<double>::max();
-        std::vector<std::vector<point_heading_t<double>>> best_solution;
-        for (const auto &rotation: best_initial_rotations) {
-            // Decompose polygon using initial rotation
-            polygon = init_polygon.rotated(rotation);
-            std::vector<MapPolygon> polygons_decomposed;
-            try {
-                polygons_decomposed = trapezoidal_decomposition(polygon,
-                                                                static_cast<decomposition_type_t>(req.decomposition_method));
-            } catch (const polygon_decomposition_error &e) {
-                ROS_ERROR("[PathGenerator]: Error while decomposing the polygon");
-                res.success = false;
-                res.message = "Error while decomposing the polygon";
-                return true;
-            }
-
-            ROS_INFO_STREAM("[PathGenerator]: Polygon decomposed. Decomposed polygons: ");
-            for (const auto &p: polygons_decomposed) {
-                ROS_INFO_STREAM("[PathGenerator] Decomposed sub polygon area: " << p.area());
-            }
-
-            // Rotate the polygon back to initial state
-            polygon = polygon.rotated(-rotation);
-
-            // Divide large polygons into smaller ones to meet the constraint on the lowest number of sub polygons
-            ROS_INFO_STREAM("[PathGenerator]: Dividing large polygons into smaller ones");
-            auto polygons_divided = split_into_number(polygons_decomposed,
-                                                      req.number_of_drones * req.min_sub_polygons_per_uav);
-            for (auto &p: polygons_divided) {
-                p = p.rotated(-rotation);
-            }
-            polygons_decomposed = polygons_divided;
-            ROS_INFO_STREAM("[PathGenerator]: Divided large polygons into smaller ones");
-
-            // Create the configuration for MSTSP solver
-            auto starting_point = gps_coordinates_to_meters({req.start_lat, req.start_lon}, gps_transform_origin);
-            mstsp_solver::SolverConfig solver_config{req.rotations_per_cell, req.sweeping_step, starting_point,
-                                                     req.number_of_drones, m_drones_altitude, m_unique_altitude_step,
-                                                     req.no_improvement_cycles_before_stop};
-            solver_config.wall_distance = req.wall_distance;
-            mstsp_solver::MstspSolver solver(solver_config, polygons_decomposed, energy_calculator,
-                                             shortest_path_calculator);
-
-            ROS_INFO_STREAM("[PathGenerator]: Optimal speed: " << energy_calculator.get_optimal_speed());
-
-            auto solver_res = solver.solve();
-
-            // Change the best solution if the current one is better
-            if (solver_res.first < best_solution_cost) {
-                best_solution_cost = solver_res.first;
-                best_solution = solver_res.second;
-                ROS_INFO_STREAM("[PathGenerator]: best solution rotation: " << rotation / M_PI * 180 << std::endl);
-            }
+        mstsp_solver::final_solution_t best_solution;
+        try {
+            best_solution = solve_for_uavs(req.number_of_drones, req, polygon, energy_calculator, shortest_path_calculator, gps_transform_origin);
+        } catch (const polygon_decomposition_error &e) {
+            ROS_ERROR("[PathGenerator]: Error while decomposing the polygon");
+            res.success = false;
+            res.message = "Error while decomposing the polygon";
+            return true;
         }
+        auto best_paths = best_solution.paths;
 
         // Modify the finishing coordinate to prevent drones from collision at the end.
         // TODO: move it to planner directly to prevent any enterings of no-fly zones while travelling to the end point
-        for (size_t i = 0; i < best_solution.size(); ++i) {
-            best_solution[i].back().x += static_cast<double>(i) * req.end_point_x_difference;
+        for (size_t i = 0; i < best_paths.size(); ++i) {
+            best_paths[i].back().x += static_cast<double>(i) * req.end_point_x_difference;
         }
 
         // Make up a response
         res.success = true;
-        res.paths_gps.resize(best_solution.size());
-        res.energy_consumptions.resize(best_solution.size());
-        for (size_t i = 0; i < best_solution.size(); ++i) {
+        res.paths_gps.resize(best_paths.size());
+        res.energy_consumptions.resize(best_paths.size());
+        for (size_t i = 0; i < best_paths.size(); ++i) {
             res.paths_gps[i].header.frame_id = "latlon_origin";
-            res.energy_consumptions[i] = energy_calculator.calculate_path_energy_consumption(remove_path_heading(best_solution[i]));
+            res.energy_consumptions[i] = energy_calculator.calculate_path_energy_consumption(
+                    remove_path_heading(best_paths[i]));
 
             // Convert each path to Path message in "latlon_origin" frame
-            auto generated_path = _generate_path_for_simulation_one_drone(best_solution[i], gps_transform_origin,
+            auto generated_path = _generate_path_for_simulation_one_drone(best_paths[i], gps_transform_origin,
                                                                           energy_calculator.get_optimal_speed(),
                                                                           energy_config.average_acceleration);
             res.paths_gps[i] = generated_path;
         }
-
         return true;
     }
 
@@ -256,6 +198,67 @@ namespace path_generation {
         }
         path.points = points;
         return path;
+    }
+
+
+    [[maybe_unused]] mstsp_solver::final_solution_t
+    PathGenerator::solve_for_uavs(int n_uavs, const thesis_path_generator::GeneratePaths::Request &req,
+                                  MapPolygon polygon,
+                                  const EnergyCalculator &energy_calculator,
+                                  const ShortestPathCalculator &shortest_path_calculator,
+                                  std::pair<double, double> gps_transform_origin) {
+        auto init_polygon = polygon;
+        // TODO: make a parameter taken from message here as it directly influences the computation time
+        auto best_initial_rotations = n_best_init_decomp_angles(polygon, 4,
+                                                                static_cast<decomposition_type_t>(req.decomposition_method));
+
+        // Run algorithm for each rotation and save the best result
+        double best_solution_cost = std::numeric_limits<double>::max();
+        mstsp_solver::final_solution_t best_solution;
+        for (const auto &rotation: best_initial_rotations) {
+            // Decompose polygon using initial rotation
+            polygon = init_polygon.rotated(rotation);
+            std::vector<MapPolygon> polygons_decomposed;
+            polygons_decomposed = trapezoidal_decomposition(polygon,
+                                                            static_cast<decomposition_type_t>(req.decomposition_method));
+
+            ROS_INFO_STREAM("[PathGenerator]: Polygon decomposed. Decomposed polygons: ");
+            for (const auto &p: polygons_decomposed) {
+                ROS_INFO_STREAM("[PathGenerator] Decomposed sub polygon area: " << p.area());
+            }
+
+            // Divide large polygons into smaller ones to meet the constraint on the lowest number of sub polygons
+            ROS_INFO_STREAM("[PathGenerator]: Dividing large polygons into smaller ones");
+            auto polygons_divided = split_into_number(polygons_decomposed,
+                                                      static_cast<size_t>(n_uavs) * req.min_sub_polygons_per_uav);
+            for (auto &p: polygons_divided) {
+                p = p.rotated(-rotation);
+            }
+            polygons_decomposed = polygons_divided;
+            ROS_INFO_STREAM("[PathGenerator]: Divided large polygons into smaller ones");
+
+            // Create the configuration for MSTSP solver
+            auto starting_point = gps_coordinates_to_meters({req.start_lat, req.start_lon}, gps_transform_origin);
+            mstsp_solver::SolverConfig solver_config{req.rotations_per_cell, req.sweeping_step, starting_point,
+                                                     static_cast<size_t>(n_uavs), m_drones_altitude,
+                                                     m_unique_altitude_step,
+                                                     req.no_improvement_cycles_before_stop};
+            solver_config.wall_distance = req.wall_distance;
+            mstsp_solver::MstspSolver solver(solver_config, polygons_decomposed, energy_calculator,
+                                             shortest_path_calculator);
+
+
+            auto solver_res = solver.solve();
+
+            // Change the best solution if the current one is better
+            if (solver_res.max_path_energy < best_solution_cost) {
+                best_solution_cost = solver_res.max_path_energy;
+                best_solution = solver_res;
+                ROS_INFO_STREAM("[PathGenerator]: best solution rotation: " << rotation / M_PI * 180 << std::endl);
+            }
+        }
+
+        return best_solution;
     }
 
 }  // namespace trajectory_generatiion

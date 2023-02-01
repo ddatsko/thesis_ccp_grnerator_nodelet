@@ -45,8 +45,10 @@ namespace path_generation {
         double m_unique_altitude_step;
         energy_calculator_config_t m_energy_config;
 
+
         /* other parameters */
         int sequence_counter = 0;
+
 
         // | --------------------- MRS transformer -------------------- |
 
@@ -54,7 +56,15 @@ namespace path_generation {
 
         ros::ServiceServer m_generate_paths_service_server;
 
-        bool callback_generate_paths(thesis_path_generator::GeneratePaths::Request &req, thesis_path_generator::GeneratePaths::Response &res);
+        bool callback_generate_paths(thesis_path_generator::GeneratePaths::Request &req,
+                                     thesis_path_generator::GeneratePaths::Response &res);
+
+        [[maybe_unused]] mstsp_solver::final_solution_t
+        solve_for_uavs(int n_uavs, const thesis_path_generator::GeneratePaths::Request &req,
+                       MapPolygon polygon,
+                       const EnergyCalculator &energy_calculator,
+                       const ShortestPathCalculator &shortest_path_calculator,
+                       std::pair<double, double> gps_transform_origin);
 
 
         /*!
@@ -64,10 +74,11 @@ namespace path_generation {
          * consecutive points is larger, new ones will be added
          * @return Path that can be sent to the follower or trajectory generator to follow it
          */
-        mrs_msgs::Path _generate_path_for_simulation_one_drone(const std::vector<point_heading_t<double>> &points_to_visit,
-                                                               point_t gps_transform_origin,
-                                                               double optimal_speed=1,
-                                                               double horizontal_acceleration=2.0);
+        mrs_msgs::Path
+        _generate_path_for_simulation_one_drone(const std::vector<point_heading_t<double>> &points_to_visit,
+                                                point_t gps_transform_origin,
+                                                double optimal_speed = 1,
+                                                double horizontal_acceleration = 2.0);
     };
 //}
 

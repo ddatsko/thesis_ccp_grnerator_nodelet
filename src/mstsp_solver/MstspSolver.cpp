@@ -83,7 +83,7 @@ namespace mstsp_solver {
     }
 
 
-    solution_cost_t MstspSolver::get_solution_cost(const solution_t &solution) const {
+    solution_cost_t MstspSolver::get_solution_cost(const _instance_solution_t &solution) const {
         double cost_sum = 0;
         double max_path_cost = 0;
 
@@ -97,8 +97,8 @@ namespace mstsp_solver {
     }
 
 
-    solution_t MstspSolver::greedy_random() const {
-        solution_t current_solution(m_config.n_uavs);
+    _instance_solution_t MstspSolver::greedy_random() const {
+        _instance_solution_t current_solution(m_config.n_uavs);
         auto target_sets = m_target_sets;
 
         // initial search in close neighborhood
@@ -151,7 +151,7 @@ namespace mstsp_solver {
 
 
 
-    std::vector<std::vector<point_heading_t<double>>> MstspSolver::get_drones_paths(const solution_t &solution) const {
+    std::vector<std::vector<point_heading_t<double>>> MstspSolver::get_drones_paths(const _instance_solution_t &solution) const {
         std::vector<std::vector<point_heading_t<double>>> res;
         int unique_altitude_id = 0;
         for (const auto & i : solution) {
@@ -199,21 +199,21 @@ namespace mstsp_solver {
 
 
 
-    std::pair<double, std::vector<std::vector<point_heading_t<double>>>> MstspSolver::solve() const {
+    final_solution_t MstspSolver::solve() const {
         ROS_INFO_STREAM("[PathGenerator]: Solving started");
-        solution_t init_solution = greedy_random();
+        _instance_solution_t init_solution = greedy_random();
         size_t nodes = 0;
         for (const auto &uav_path: init_solution) {
             nodes += uav_path.size();
         }
 
-        std::list<solution_t> tabu_list;
+        std::list<_instance_solution_t> tabu_list;
         solution_cost_t best_solution_cost = get_solution_cost(init_solution);
 
         int best_group = 0;
         solution_cost_t best_neighbourhood_cost = solution_cost_t::max();
 
-        solution_t best_neighbourhood_solution = init_solution;
+        _instance_solution_t best_neighbourhood_solution = init_solution;
         tabu_list.push_back(init_solution);
 
         int R_T_iterator = m_config.R_T;
@@ -222,7 +222,7 @@ namespace mstsp_solver {
         int no_improvement_iteration = 0;
         int g1_score = m_config.w0;
         int g2_score = g1_score, g3_score = g1_score, g4_score = g1_score;
-        solution_t final_solution = init_solution;
+        _instance_solution_t final_solution = init_solution;
 
         while (!stop_criteria) {
             if (iteration % 50 == 0) {
@@ -241,7 +241,7 @@ namespace mstsp_solver {
             }
 
             for (size_t j = 0; j < nodes; ++j) {
-                solution_t tabu_solution = best_neighbourhood_solution;
+                _instance_solution_t tabu_solution = best_neighbourhood_solution;
                 int total_score = g1_score + g2_score + g3_score + g4_score;
                 int random = generate_random_number() % total_score;
                 if (random < g1_score) {
@@ -301,12 +301,12 @@ namespace mstsp_solver {
                 stop_criteria = true;
             }
         }
-        return {best_solution_cost.max_path_cost, get_drones_paths(final_solution)};
+        return {best_solution_cost.max_path_cost, best_solution_cost.path_cost_sum, get_drones_paths(final_solution)};
     }
 
 
     // Random shift intra-inter route
-    void MstspSolver::get_g1_solution(solution_t &solution) const {
+    void MstspSolver::get_g1_solution(_instance_solution_t &solution) const {
         for (size_t i = 0; i <= solution.size(); ++i) {
             // If each UAV visits only 1 or 0 polygons, there is no need (and it will lead to some errors) to continue
             if (i == solution.size()) {
@@ -356,7 +356,7 @@ namespace mstsp_solver {
     }
 
     // best shift intra-inter route based on exhaustive search
-    void MstspSolver::get_g2_solution(solution_t &solution) const {
+    void MstspSolver::get_g2_solution(_instance_solution_t &solution) const {
         for (size_t i = 0; i <= solution.size(); ++i) {
             // If each UAV visits only 1 or 0 polygons, there is no need (and it will lead to some errors) to continue
             if (i == solution.size()) {
@@ -388,7 +388,7 @@ namespace mstsp_solver {
                 if (i == index_a1 && j == index_c1) {
                     continue;
                 }
-                solution_t intermediate_solution = solution;
+                _instance_solution_t intermediate_solution = solution;
                 intermediate_solution[i].insert(intermediate_solution[i].begin() + static_cast<long>(j),
                                                 target_to_move);
                 for (size_t k = 0; k < target_set_to_check.targets.size(); ++k) {
@@ -411,7 +411,7 @@ namespace mstsp_solver {
     }
 
     // best swap intra-inter route based on exhaustive search
-    void MstspSolver::get_g3_solution(solution_t &solution) const {
+    void MstspSolver::get_g3_solution(_instance_solution_t &solution) const {
         for (size_t i = 0; i <= solution.size(); ++i) {
             // If each UAV visits only 1 or 0 polygons, there is no need (and it will lead to some errors) to continue
             if (i == solution.size()) {
@@ -460,7 +460,7 @@ namespace mstsp_solver {
     }
 
 
-    void MstspSolver::get_g4_solution(solution_t &solution) const {
+    void MstspSolver::get_g4_solution(_instance_solution_t &solution) const {
         for (size_t i = 0; i <= solution.size(); ++i) {
             // If each UAV visits only 1 or 0 polygons, there is no need (and it will lead to some errors) to continue
             if (i == solution.size()) {
@@ -493,7 +493,7 @@ namespace mstsp_solver {
         solution[index_a1][index_c1] = best_target;
     }
 
-    void MstspSolver::find_best_targets_for_position(solution_t &solution, size_t uav1, size_t path_index_1,
+    void MstspSolver::find_best_targets_for_position(_instance_solution_t &solution, size_t uav1, size_t path_index_1,
                                                      size_t uav2, size_t path_index_2) const {
         solution_cost_t best_cost = solution_cost_t::max();
 

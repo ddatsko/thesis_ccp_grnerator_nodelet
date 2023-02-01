@@ -8,6 +8,7 @@
 #include <numeric>
 #include <set>
 #include <map>
+#include <algorithm>
 #include "custom_types.hpp"
 #include "utils.hpp"
 
@@ -37,6 +38,25 @@ struct MapPolygon {
 
     MapPolygon() = default;
     MapPolygon(const MapPolygon &p);
+
+    /*!
+     * Constructor for creating a MapPolygon from something like GeneratePaths.srv message
+     * @tparam P Type of a polygon. Should contain a field "points" which is a container of points that hav fields "x" and "y"
+     * @tparam Al Allocator type for vector of no_fly_ones
+     * @param fly_zone Description of a fly zone
+     * @param no_fly_zones Vector of descriptions of each no fly zone
+     * @param gps_transform_origin GPS coordinates of the point, that will be mapped to (0, 0) after transformation to meters
+     */
+    template<typename P, typename Al>
+    MapPolygon(const P &fly_zone, const std::vector<P, Al> &no_fly_zones, std::pair<double, double> gps_transform_origin) {
+        std::for_each(fly_zone.points.begin(), fly_zone.points.end(), [&](const auto &p){fly_zone_polygon_points.push_back(gps_coordinates_to_meters({p.x, p.y}, gps_transform_origin));});
+        make_polygon_clockwise(fly_zone_polygon_points);
+        for (auto &no_fly_zone: no_fly_zones) {
+            no_fly_zone_polygons.emplace_back();
+            std::for_each(no_fly_zone.points.begin(), no_fly_zone.points.end(), [&](const auto &p) {no_fly_zone_polygons.back().push_back(gps_coordinates_to_meters({p.x, p.y}, gps_transform_origin));});
+            make_polygon_clockwise(no_fly_zone_polygons[no_fly_zone_polygons.size() - 1]);
+        }
+    }
 
     MapPolygon& operator=(const MapPolygon &rhs) = default;
 
