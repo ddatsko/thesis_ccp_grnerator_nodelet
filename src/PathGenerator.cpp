@@ -116,7 +116,8 @@ namespace path_generation {
 
         mstsp_solver::final_solution_t best_solution;
         try {
-            best_solution = solve_for_uavs(req.number_of_drones, req, polygon, energy_calculator, shortest_path_calculator, gps_transform_origin);
+            auto f = [&](int n){return solve_for_uavs(n, req, polygon, energy_calculator, shortest_path_calculator, gps_transform_origin);};
+            best_solution = generate_with_constraints(req.max_single_path_energy * 3600, req.number_of_drones, f);
         } catch (const polygon_decomposition_error &e) {
             ROS_ERROR("[PathGenerator]: Error while decomposing the polygon");
             res.success = false;
@@ -130,6 +131,8 @@ namespace path_generation {
         for (size_t i = 0; i < best_paths.size(); ++i) {
             best_paths[i].back().x += static_cast<double>(i) * req.end_point_x_difference;
         }
+
+
 
         // Make up a response
         res.success = true;
@@ -148,7 +151,6 @@ namespace path_generation {
         }
         return true;
     }
-
 
     mrs_msgs::Path PathGenerator::_generate_path_for_simulation_one_drone(
             const std::vector<point_heading_t<double>> &points_to_visit,

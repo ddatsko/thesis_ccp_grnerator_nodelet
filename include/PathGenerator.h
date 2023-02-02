@@ -59,6 +59,7 @@ namespace path_generation {
         bool callback_generate_paths(thesis_path_generator::GeneratePaths::Request &req,
                                      thesis_path_generator::GeneratePaths::Response &res);
 
+
         [[maybe_unused]] mstsp_solver::final_solution_t
         solve_for_uavs(int n_uavs, const thesis_path_generator::GeneratePaths::Request &req,
                        MapPolygon polygon,
@@ -79,7 +80,45 @@ namespace path_generation {
                                                 point_t gps_transform_origin,
                                                 double optimal_speed = 1,
                                                 double horizontal_acceleration = 2.0);
+
+        /*!
+         * Generate paths with max energy not more than max_energy_bound. Number of produced paths is greater or equal to the number of UAVs
+         * @tparam F callable type for generating paths with the specified number of uavs. (int) -> mstsp_solver::final_solution_t
+         * @param max_energy_bound maximum energy of one path in Joules
+         * @param n_uavs Number of uavs. There will be no less paths than this number
+         * @param f Function that generates the specified number of paths
+         * @return Solution to the problem
+         */
+        template<typename F>
+        [[maybe_unused]] mstsp_solver::final_solution_t generate_with_constraints(double max_energy_bound, unsigned int n_uavs, F f) {
+            // Generate the initial solution that can be optimized after
+            mstsp_solver::final_solution_t solution = f(n_uavs);
+            if (solution.max_path_energy < max_energy_bound) {
+                return solution;
+            }
+
+            auto current_n_uavs = n_uavs;
+            int iteration = 0;
+            while (solution.max_path_energy > max_energy_bound) {
+                // Stop if too many iterations are already done. TODO: remove the hardcoded value from here
+                if (++iteration > 10) {
+                    ROS_WARN("[PathGenerator]: could not generate paths to satisfy the upper bound on energy consumption...");
+                    return solution;
+                }
+                // if the energy consumption is divided well, this should be enough
+                unsigned int updated_n_uavs = std::ceil(solution.path_energies_sum / max_energy_bound);
+
+                // if the needed number of UAVs is estimated to be smaller than on previous step, make it larger
+                if (updated_n_uavs <= current_n_uavs) {
+                    updated_n_uavs = current_n_uavs + 1;
+                }
+                current_n_uavs = updated_n_uavs;
+                solution = f(current_n_uavs);
+            }
+            return solution;
+
+        }
     };
-//}
+
 
 }  // namespace trajectory_generatiion

@@ -6,6 +6,9 @@
 #include <ros/ros.h>
 
 namespace {
+    // NOTE: here PROPELLER_EFFICIENCY contains both motor and propeller efficiency combined.
+    // The value is taken is the ratio of a real-world power consumption to a power consumption with ideal motor and propeller calculated by (5), obtained in experiments
+    // TODO: move these constants to a config file
     const double AIR_DENSITY = 1.225; // [kg/m^3]
     const double EARTH_GRAVITY = 9.8; //[m/s^2, N/kg]
     const double PROPELLER_EFFICIENCY = 0.391; // Usually from 0.5 to 0.7
@@ -195,7 +198,6 @@ double EnergyCalculator::calculate_path_energy_consumption(const std::vector<std
             path_filtered.push_back(path[i]);
         }
     }
-
 
     double total_energy = 0;
     std::vector<turning_properties_t> turns;
