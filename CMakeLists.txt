@@ -36,13 +36,14 @@ catkin_package(
 )
 
 include_directories(include
+#        /home/mrs/mrs_workspace/devel/.private/thesis_path_generator/include   # Clion cannot find headers without this for some reason. TODO: remove this
   ${catkin_INCLUDE_DIRS}
   pugixml/src
 )
 
 
 
-add_library(${FILESNAME} src/${FILESNAME}.cpp src/MapPolygon.cpp src/utils.cpp src/algorithms.cpp pugixml/src/pugixml.cpp src/EnergyCalculator.cpp src/ShortestPathCalculator.cpp include/ShortestPathCalculator.hpp include/custom_types.hpp include/mstsp_solver/Target.h src/mstsp_solver/TargetSet.cpp include/mstsp_solver/TargetSet.h include/mstsp_solver/SolverConfig.h src/mstsp_solver/MstspSolver.cpp include/mstsp_solver/MstspSolver.h include/mstsp_solver/Insertion.h)
+add_library(${FILESNAME} src/${FILESNAME}.cpp src/MapPolygon.cpp include/MapPolygon.hpp src/utils.cpp src/algorithms.cpp pugixml/src/pugixml.cpp src/EnergyCalculator.cpp src/ShortestPathCalculator.cpp include/ShortestPathCalculator.hpp include/custom_types.hpp include/mstsp_solver/Target.h src/mstsp_solver/TargetSet.cpp include/mstsp_solver/TargetSet.h include/mstsp_solver/SolverConfig.h src/mstsp_solver/MstspSolver.cpp include/mstsp_solver/MstspSolver.h include/mstsp_solver/Insertion.h include/SimpleLogger.h include/LoggerRos.h)
 
 add_dependencies(${FILESNAME} ${${FILESNAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 

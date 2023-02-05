@@ -11,18 +11,19 @@
 #include <algorithm>
 #include "custom_types.hpp"
 #include "utils.hpp"
+#include <memory>
+#include <SimpleLogger.h>
 
 
-
-struct kml_file_parse_error: public std::runtime_error {
-  using runtime_error::runtime_error;
-};
-
-struct non_existing_point_error: public std::runtime_error {
+struct kml_file_parse_error : public std::runtime_error {
     using runtime_error::runtime_error;
 };
 
-struct wrong_polygon_format_error: public std::runtime_error {
+struct non_existing_point_error : public std::runtime_error {
+    using runtime_error::runtime_error;
+};
+
+struct wrong_polygon_format_error : public std::runtime_error {
     using runtime_error::runtime_error;
 };
 
@@ -31,12 +32,15 @@ struct wrong_polygon_format_error: public std::runtime_error {
  * Structure for representation of a polygon with holes
  */
 struct MapPolygon {
+public:
     using polygon_t = std::vector<point_t>;
 
+    // TODO: consider making these fields private and accessible only through getters
     polygon_t fly_zone_polygon_points;
     std::vector<polygon_t> no_fly_zone_polygons;
 
     MapPolygon() = default;
+
     MapPolygon(const MapPolygon &p);
 
     /*!
@@ -48,17 +52,23 @@ struct MapPolygon {
      * @param gps_transform_origin GPS coordinates of the point, that will be mapped to (0, 0) after transformation to meters
      */
     template<typename P, typename Al>
-    MapPolygon(const P &fly_zone, const std::vector<P, Al> &no_fly_zones, std::pair<double, double> gps_transform_origin) {
-        std::for_each(fly_zone.points.begin(), fly_zone.points.end(), [&](const auto &p){fly_zone_polygon_points.push_back(gps_coordinates_to_meters({p.x, p.y}, gps_transform_origin));});
+    MapPolygon(const P &fly_zone, const std::vector<P, Al> &no_fly_zones,
+               std::pair<double, double> gps_transform_origin) {
+        std::for_each(fly_zone.points.begin(), fly_zone.points.end(), [&](const auto &p) {
+            fly_zone_polygon_points.push_back(gps_coordinates_to_meters({p.x, p.y}, gps_transform_origin));
+        });
         make_polygon_clockwise(fly_zone_polygon_points);
         for (auto &no_fly_zone: no_fly_zones) {
             no_fly_zone_polygons.emplace_back();
-            std::for_each(no_fly_zone.points.begin(), no_fly_zone.points.end(), [&](const auto &p) {no_fly_zone_polygons.back().push_back(gps_coordinates_to_meters({p.x, p.y}, gps_transform_origin));});
+            std::for_each(no_fly_zone.points.begin(), no_fly_zone.points.end(), [&](const auto &p) {
+                no_fly_zone_polygons.back().push_back(gps_coordinates_to_meters({p.x, p.y}, gps_transform_origin));
+            });
             make_polygon_clockwise(no_fly_zone_polygons[no_fly_zone_polygons.size() - 1]);
         }
     }
 
-    MapPolygon& operator=(const MapPolygon &rhs) = default;
+
+    MapPolygon &operator=(const MapPolygon &rhs) = default;
 
     /*!
      * Parse a KML file and read points from it.
@@ -172,7 +182,8 @@ std::vector<MapPolygon> split_into_number(std::vector<MapPolygon> &sub_polygons,
  * @param angle_eps Epsilon up to which consider the angles to be the same (to prevent a couple of very similar ones)
  * @return
  */
-std::vector<double> n_best_init_decomp_angles(const MapPolygon &m, int n, decomposition_type_t decomposition_type, double angle_eps=0.1);
+std::vector<double>
+n_best_init_decomp_angles(const MapPolygon &m, int n, decomposition_type_t decomposition_type, double angle_eps = 0.1);
 
 
 #endif //MAP_TO_GRAPH_MAPPOLYGON_HPP

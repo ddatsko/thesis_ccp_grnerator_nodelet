@@ -9,6 +9,11 @@ namespace {
     constexpr double POINT_EPS = 1e-5;
 
     double vertical_line_segment_intersection(const segment_t &segment, double x) {
+        // If segment is vertical, just return its midpoint
+        if (segment.first.first == segment.second.first) {
+            return (segment.first.second + segment.second.second) / 2;
+        }
+
         return (x - segment.first.first) * (segment.second.second - segment.first.second) /
                (segment.second.first - segment.first.first) + segment.first.second;
     }
@@ -52,9 +57,9 @@ namespace {
 //            std::cout << "Rightmost edge: " << rightmost_edge.first.first << ", " << rightmost_edge.first.second << ";   " << rightmost_edge.second.first << ", " << rightmost_edge.second.second << std::endl;
             // If merging edge matches
             if (isclose(rightmost_edge.second.first, merging_edge.first.first, POINT_EPS) &&
-              isclose(rightmost_edge.second.second, merging_edge.first.second, POINT_EPS) &&
-              isclose(rightmost_edge.first.first, merging_edge.second.first, POINT_EPS) &&
-              isclose(rightmost_edge.first.second, merging_edge.second.second, POINT_EPS)) {
+                isclose(rightmost_edge.second.second, merging_edge.first.second, POINT_EPS) &&
+                isclose(rightmost_edge.first.first, merging_edge.second.first, POINT_EPS) &&
+                isclose(rightmost_edge.first.second, merging_edge.second.second, POINT_EPS)) {
 //                std::cout << "Inserting" << std::endl;
                 auto p_old = p;
 
@@ -65,7 +70,8 @@ namespace {
                         new_polygon.fly_zone_polygon_points.begin() + static_cast<long>(2),
                         new_polygon.fly_zone_polygon_points.end() - 1);
 
-                if (decomposition_type==BOUSTROPHEDON_WITH_CONVEX_POLYGONS && !polygon_convex(p.fly_zone_polygon_points)) {
+                if (decomposition_type == BOUSTROPHEDON_WITH_CONVEX_POLYGONS &&
+                    !polygon_convex(p.fly_zone_polygon_points)) {
                     p = p_old;
                     polygons.push_back(new_polygon);
                 }
@@ -135,11 +141,11 @@ vpdd thin_polygon_coverage(const MapPolygon &polygon, double sweeping_step, doub
             res = {{segment_center, vertical_line_segment_intersection(coverage_line, segment_center)}};
         } else {
             res = {{coverage_line.first.first + wall_distance,  vertical_line_segment_intersection(coverage_line,
-                                                                                                    coverage_line.first.first +
-                                                                                                    wall_distance)},
-                    {coverage_line.second.first - wall_distance, vertical_line_segment_intersection(coverage_line,
-                                                                                                    coverage_line.second.first -
-                                                                                                    wall_distance)}};
+                                                                                                   coverage_line.first.first +
+                                                                                                   wall_distance)},
+                   {coverage_line.second.first - wall_distance, vertical_line_segment_intersection(coverage_line,
+                                                                                                   coverage_line.second.first -
+                                                                                                   wall_distance)}};
         }
     }
     for (auto &p: res) {
@@ -170,7 +176,7 @@ vpdd sweeping(const MapPolygon &polygon, double angle, double sweeping_step, dou
         std::set<double> intersection_ys;
         for (const auto &segment: rotated_polygon.get_all_segments()) {
             if ((segment.first.first < current_x && segment.second.first < current_x) ||
-                    (segment.first.first > current_x && segment.second.first > current_x)) {
+                (segment.first.first > current_x && segment.second.first > current_x)) {
                 continue;
             }
             auto intersection = segment_vertical_line_intersection(segment, current_x);
@@ -220,14 +226,15 @@ vpdd sweeping(const MapPolygon &polygon, double angle, double sweeping_step, dou
     if (res_path.empty()) {
         double sum_x = 0.0;
         double sum_y = 0.0;
-        for (const auto&[x, y]: rotated_polygon.fly_zone_polygon_points) {
+        for (const auto &[x, y]: rotated_polygon.fly_zone_polygon_points) {
             sum_x += x;
             sum_y += y;
         }
-        res_path.push_back({sum_x / polygon.fly_zone_polygon_points.size(), sum_y / polygon.fly_zone_polygon_points.size()});
+        res_path.push_back(
+                {sum_x / polygon.fly_zone_polygon_points.size(), sum_y / polygon.fly_zone_polygon_points.size()});
     }
 
-    std::for_each(res_path.begin(), res_path.end(), [angle](auto &p){p = rotate_point(p, -angle);});
+    std::for_each(res_path.begin(), res_path.end(), [angle](auto &p) { p = rotate_point(p, -angle); });
 
     return res_path;
 }
@@ -247,14 +254,17 @@ std::vector<MapPolygon> trapezoidal_decomposition(const MapPolygon &polygon, dec
         const double x = p.first, y = p.second;
         auto neighbors = polygon.point_neighbors(p);
 
-        segment_t lower_segment = {p, (std::sin(get_segment_rotation({p, neighbors.first})) < std::sin(get_segment_rotation({p, neighbors.second})) ? neighbors.first
-                                                                                        : neighbors.second)};
-        segment_t upper_segment = {p, (std::sin(get_segment_rotation({p, neighbors.first})) < std::sin(get_segment_rotation({p, neighbors.second}))  ? neighbors.second
-                                                                                        : neighbors.first)};
+        bool first_segment_lower = std::sin(get_segment_rotation({p, neighbors.first})) <
+                                   std::sin(get_segment_rotation({p, neighbors.second}));
+        segment_t lower_segment = {p, (first_segment_lower ? neighbors.first : neighbors.second)};
+        segment_t upper_segment = {p, (first_segment_lower ? neighbors.second : neighbors.first)};
 
         // Two segments starting in this point are moving to the right.
         // Case of area is split by a no-fly zone inside (e.g. island)
-        if (neighbors.first.first >= x && neighbors.second.first >= x) {
+        // The second line means that if the segment is purely vertical, the lowest point is considered as "diverging" while the top one is considered as simple point on one side
+        if (neighbors.first.first >= x && neighbors.second.first >= x
+            && !((neighbors.first.first == x && neighbors.first.second < y) ||
+                 (neighbors.second.first == x && neighbors.second.second < y))) {
 //            std::cout << "DIVERGE" << std::endl;
             bool found_space = false;
             for (size_t i = 0; i < current_segments.size(); ++i) {
@@ -285,7 +295,11 @@ std::vector<MapPolygon> trapezoidal_decomposition(const MapPolygon &polygon, dec
 
 
         // Case when two segments converge. Thus, two new trapezoids must be added and two edges deleted
-        if (neighbors.first.first <= x && neighbors.second.first <= x) {
+        // As in the condition above, the second line represents the condition when two point are located on one vertical line
+        // If the segment is directed up from the current point, consider it as a common point on  segment. If its directed down, the point is the last and should be treated as "Converging point"
+        if (neighbors.first.first <= x && neighbors.second.first <= x &&
+            !((neighbors.first.first == x && neighbors.first.second > y) ||
+              (neighbors.second.first == x && neighbors.second.second > y))) {
 //            std::cout << "CONVERGE" << std::endl;
             bool found_space = false;
             for (size_t i = 0; i < current_segments.size(); ++i) {
@@ -354,5 +368,13 @@ std::vector<MapPolygon> trapezoidal_decomposition(const MapPolygon &polygon, dec
         }
     }
 
-    return res;
+    // Filter out polygons with 0 area
+    std::vector<MapPolygon> filtered;
+    for (auto &pol: res) {
+        if (!isclose(pol.area(), 0.0, POINT_EPS)) {
+            filtered.emplace_back(std::move(pol));
+        }
+    }
+
+    return filtered;
 }

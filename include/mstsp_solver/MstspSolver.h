@@ -12,8 +12,9 @@
 #include "Target.h"
 #include "ShortestPathCalculator.hpp"
 #include "custom_types.hpp"
+#include <SimpleLogger.h>
 
-struct metaheuristic_application_error: public std::runtime_error {
+struct metaheuristic_application_error : public std::runtime_error {
     using runtime_error::runtime_error;
 };
 
@@ -22,8 +23,10 @@ struct metaheuristic_application_error: public std::runtime_error {
 template<typename T=double>
 struct point_heading_t {
     point_heading_t() = default;
-    point_heading_t(T x, T y): x{x}, y{y}, z{0}, heading{0} {};
-    explicit point_heading_t(std::pair<T, T> p): x{p.first}, y{p.second}, z{0}, heading{0} {};
+
+    point_heading_t(T x, T y) : x{x}, y{y}, z{0}, heading{0} {};
+
+    explicit point_heading_t(std::pair<T, T> p) : x{p.first}, y{p.second}, z{0}, heading{0} {};
     T x;
     T y;
     T z;
@@ -49,7 +52,7 @@ struct solution_cost_t {
 
     bool operator<(const solution_cost_t &rhs) const {
         return (max_path_cost < rhs.max_path_cost ||
-        (max_path_cost == rhs.max_path_cost && path_cost_sum < rhs.path_cost_sum));
+                (max_path_cost == rhs.max_path_cost && path_cost_sum < rhs.path_cost_sum));
     }
 };
 
@@ -66,7 +69,7 @@ namespace mstsp_solver {
     struct final_solution_t {
         double max_path_energy;
         double path_energies_sum;
-        std::vector<std::vector<point_heading_t<double>>> paths;
+        std::vector<std::vector<point_heading_t < double>>> paths;
     };
 
 //    struct _instance_solution_t {
@@ -79,7 +82,7 @@ namespace mstsp_solver {
     public:
         MstspSolver(SolverConfig config,
                     const std::vector<MapPolygon> &decomposed_polygons,
-                    const EnergyCalculator &energy_calculator,
+                    EnergyCalculator energy_calculator,
                     ShortestPathCalculator shortest_path_calculator);
 
         /*!
@@ -89,7 +92,12 @@ namespace mstsp_solver {
          */
         final_solution_t solve() const;
 
+        void set_logger(std::shared_ptr<loggers::SimpleLogger> new_logger) {
+            m_logger = std::move(new_logger);
+        }
+
     private:
+        std::shared_ptr<loggers::SimpleLogger> m_logger;
         std::vector<TargetSet> m_target_sets;
         const SolverConfig m_config;
         const EnergyCalculator m_energy_calculator;
@@ -110,7 +118,9 @@ namespace mstsp_solver {
          * @param solution  Problem solution as path consisting of Targets that need to be visited by each drone
          * @return Vector of paths for each drone (size if config.n_uavs)
          */
-        std::vector<std::vector<point_heading_t<double>>> get_drones_paths(const _instance_solution_t &solution) const;
+        std::vector<std::vector<point_heading_t < double>>>
+
+        get_drones_paths(const _instance_solution_t &solution) const;
 
 //        std::vector<std::vector<point_heading_t<double>> get_drones_paths_wi
 
@@ -127,7 +137,10 @@ namespace mstsp_solver {
          * @param unique_alt_id Id for unique altitude during changing the sub-polygon for collision avoidance
          * @return Path with the right heading
          */
-        std::vector<point_heading_t<double>> path_with_heading(const std::vector<Target> &targets, int unique_alt_id) const;
+        std::vector<point_heading_t < double>> path_with_heading(
+        const std::vector<Target> &targets,
+        int unique_alt_id
+        ) const;
 
         /*!
          * Apply step 1: Random Shift

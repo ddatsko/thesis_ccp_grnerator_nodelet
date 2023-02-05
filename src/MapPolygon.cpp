@@ -4,7 +4,8 @@
 #include "utils.hpp"
 #include <algorithm>
 #include <stdexcept>
-#include <ros/ros.h>
+#include <cmath>
+//#include <ros/ros.h>
 #include "algorithms.hpp"
 
 // TODO: make most of methods external functions (maybe, working on not MapPolygons but just on vector<pair<double, double>>
@@ -211,7 +212,7 @@ std::vector<segment_t> MapPolygon::get_all_segments() const {
     for (size_t i = 0; i + 1 < fly_zone_polygon_points.size(); ++i) {
         segments.emplace_back(fly_zone_polygon_points[i], fly_zone_polygon_points[i + 1]);
     }
-    for (const auto& pol: no_fly_zone_polygons) {
+    for (const auto &pol: no_fly_zone_polygons) {
         for (size_t i = 0; i + 1 < pol.size(); ++i) {
             segments.emplace_back(pol[i], pol[i + 1]);
         }
@@ -221,8 +222,10 @@ std::vector<segment_t> MapPolygon::get_all_segments() const {
 
 std::vector<double> MapPolygon::get_n_longest_edges_rotation_angles(size_t n) const {
     auto edges = get_all_segments();
-    std::sort(edges.begin(), edges.end(), [](const segment_t &s1, const segment_t &s2){return segment_length(s1) >
-            segment_length(s2);});
+    std::sort(edges.begin(), edges.end(), [](const segment_t &s1, const segment_t &s2) {
+        return segment_length(s1) >
+               segment_length(s2);
+    });
     std::vector<double> rotations;
     for (size_t i = 0; i < n && i < edges.size(); ++i) {
         double segment_rotation = M_PI_2 - get_segment_rotation(edges[i]);
@@ -241,7 +244,7 @@ double MapPolygon::area() const {
     double whole_area = 0;
     for (size_t i = 1; i < fly_zone_polygon_points.size(); ++i) {
         whole_area += (fly_zone_polygon_points[i - 1].first + fly_zone_polygon_points[i].first) *
-                (fly_zone_polygon_points[i - 1].second - fly_zone_polygon_points[i].second);
+                      (fly_zone_polygon_points[i - 1].second - fly_zone_polygon_points[i].second);
     }
     return std::abs(whole_area / 2);
 }
@@ -250,9 +253,10 @@ void MapPolygon::make_pure_convex() {
     if (fly_zone_polygon_points.empty()) {
         return;
     }
-    std::vector<point_t> new_fly_zone {fly_zone_polygon_points[0]};
+    std::vector<point_t> new_fly_zone{fly_zone_polygon_points[0]};
     for (size_t i = 1; i + 1 < fly_zone_polygon_points.size(); ++i) {
-        if (std::abs(angle_between_vectors(fly_zone_polygon_points[i - 1], fly_zone_polygon_points[i], fly_zone_polygon_points[i + 1]) - M_PI) < 1e-4) {
+        if (std::abs(angle_between_vectors(fly_zone_polygon_points[i - 1], fly_zone_polygon_points[i],
+                                           fly_zone_polygon_points[i + 1]) - M_PI) < 1e-4) {
             continue;
         }
         new_fly_zone.push_back(fly_zone_polygon_points[i]);
@@ -284,8 +288,8 @@ std::pair<MapPolygon, MapPolygon> MapPolygon::split_by_vertical_line(double x) {
         }
 
         if (fly_zone_copy[i + 1].first != x &&
-                ((fly_zone_copy[i].first < x && fly_zone_copy[i + 1].first > x) ||
-                (fly_zone_copy[i].first > x && fly_zone_copy[i + 1].first < x))) {
+            ((fly_zone_copy[i].first < x && fly_zone_copy[i + 1].first > x) ||
+             (fly_zone_copy[i].first > x && fly_zone_copy[i + 1].first < x))) {
             auto intersection = segment_vertical_line_intersection({fly_zone_copy[i], fly_zone_copy[i + 1]}, x);
             new_pol[0].push_back(intersection);
             new_pol[1].push_back(intersection);
@@ -313,8 +317,6 @@ std::pair<MapPolygon, MapPolygon> MapPolygon::split_by_vertical_line(double x) {
     }
     return res;
 }
-
-
 
 
 std::vector<MapPolygon> MapPolygon::split_into_pieces(double max_piece_area) {
@@ -353,7 +355,7 @@ std::vector<MapPolygon> MapPolygon::split_into_pieces(double max_piece_area) {
         res.push_back(cur_polygon);
         return res;
     } catch (std::runtime_error &e) {
-        ROS_ERROR_STREAM("[PathGenerator]: ERROR while dividing polygon: " << e.what());
+//        m_logger->log_err("[PathGenerator]: ERROR while dividing polygon: " + std::string(e.what()));
     }
     return {};
 }
@@ -361,13 +363,13 @@ std::vector<MapPolygon> MapPolygon::split_into_pieces(double max_piece_area) {
 point_t MapPolygon::leftmost_point() const {
     return std::reduce(fly_zone_polygon_points.begin(), fly_zone_polygon_points.end(),
                        std::make_pair(std::numeric_limits<double>::max(), std::numeric_limits<double>::max()),
-                       [](const auto &p1, const auto &p2){return p1.first < p2.first ? p1 : p2;});
+                       [](const auto &p1, const auto &p2) { return p1.first < p2.first ? p1 : p2; });
 }
 
 point_t MapPolygon::rightmost_point() const {
     return std::reduce(fly_zone_polygon_points.begin(), fly_zone_polygon_points.end(),
                        std::make_pair(std::numeric_limits<double>::lowest(), std::numeric_limits<double>::lowest()),
-                       [](const auto &p1, const auto &p2){return p1.first < p2.first ? p2 : p1;});
+                       [](const auto &p1, const auto &p2) { return p1.first < p2.first ? p2 : p1; });
 }
 
 
@@ -396,7 +398,6 @@ double MapPolygon::height() const {
     }
     return highest_y - lowest_y;
 }
-
 
 
 namespace {
@@ -459,7 +460,8 @@ namespace {
 }
 
 
-std::vector<double> n_best_init_decomp_angles(const MapPolygon &m, int n, decomposition_type_t decomposition_type, double angle_eps) {
+std::vector<double>
+n_best_init_decomp_angles(const MapPolygon &m, int n, decomposition_type_t decomposition_type, double angle_eps) {
     std::vector<std::pair<double, double>> angles_costs;
 
     // Iterate through the angle of each polygon edge and try to find the best one

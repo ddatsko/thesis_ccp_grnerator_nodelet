@@ -2,8 +2,9 @@
 #include <cmath>
 #include <algorithm>
 #include <iostream>
+#include <memory>
+#include <sstream>
 #include "utils.hpp"
-#include <ros/ros.h>
 
 namespace {
     // NOTE: here PROPELLER_EFFICIENCY contains both motor and propeller efficiency combined.
@@ -36,6 +37,9 @@ double EnergyCalculator::angle_between_points(std::pair<double, double> p0, std:
 
 EnergyCalculator::EnergyCalculator(const energy_calculator_config_t &energy_calculator_config) : config(
         energy_calculator_config) {
+
+    m_logger = std::make_shared<loggers::SimpleLogger>();
+
     // induced velocity at hover
     double v_i_h = std::sqrt((config.drone_mass * EARTH_GRAVITY) /
                              (2 * AIR_DENSITY * M_PI * config.propeller_radius * config.propeller_radius *
@@ -72,7 +76,7 @@ EnergyCalculator::EnergyCalculator(const energy_calculator_config_t &energy_calc
 
     v_r = v_i_h / v_r_inv;
 
-    ROS_INFO_STREAM("[PathGenerator]: ENERGY CALCULATOR: Optimal speed: " << v_r << "Time of flight: " << t_r);
+    m_logger->log_info("[PathGenerator]: ENERGY CALCULATOR: Optimal speed: " + std::to_string(v_r) + "Time of flight: " + std::to_string(t_r));
 }
 
 turning_properties_t EnergyCalculator::calculate_turning_properties(double angle) const {
@@ -118,7 +122,6 @@ double EnergyCalculator::calculate_straight_line_energy(double v_in, double a_in
     if (s_acc + s_dec <= s_tot) {
         return (t_acc + t_dec) * P_r + ((s_tot - s_acc - s_dec) / v_r) * P_r;
     } else {
-//        std::cout << "Short line" << std::endl;
         return calculate_short_line_energy(v_in, a_in, v_out, a_out, s_tot);
     }
 }
@@ -161,7 +164,6 @@ EnergyCalculator::calculate_short_line_energy(double v_in, double a_in, double v
     auto v_sol = std::sqrt(
             (v_in * v_in / a_in + v_out * v_out / std::abs(a_out) + 2 * s) / (1 / a_in + 1 / std::abs(a_out)));
 
-//    std::cout << "Solution v: " << v_sol << std::endl;
     if (std::isnan(v_sol) || v_sol < v_in || v_sol < v_out || v_sol > v_r) {
         auto middle_speed = (v_out + v_in) / 2;
         return s / middle_speed * P_r;
@@ -179,7 +181,7 @@ EnergyCalculator::calculate_short_line_energy(double v_in, double a_in, double v
         return (t_acc + t_dec) * P_r;
     }
 
-//    << "Warning: To short segment" << std::endl;
+//    m_logger->log_debug("Warning: To short segment");
     return 0.0;
 }
 

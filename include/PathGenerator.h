@@ -26,6 +26,7 @@
 #include <thesis_path_generator/GeneratePaths.h>
 #include "utils.hpp"
 #include "mstsp_solver/MstspSolver.h"
+#include "SimpleLogger.h"
 
 namespace path_generation {
 
@@ -37,6 +38,8 @@ namespace path_generation {
         virtual void onInit();
 
     private:
+        std::shared_ptr<loggers::SimpleLogger> m_shared_logger;
+
         /* flags */
         bool m_is_initialized = false;
 

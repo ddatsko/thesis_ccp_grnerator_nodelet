@@ -6,13 +6,14 @@
 #include "algorithms.hpp"
 #include <iostream>
 #include <algorithm>
+#include <utility>
 
 namespace mstsp_solver {
 
     TargetSet::TargetSet(size_t index, const MapPolygon &polygon, double sweeping_step, double wall_distance,
-                         const EnergyCalculator &energy_calculator,
+                         EnergyCalculator energy_calculator,
                          const std::vector<double> &rotation_angles) : index(index), polygon(polygon),
-                                                                       energy_calculator(energy_calculator),
+                                                                       energy_calculator(std::move(energy_calculator)),
                                                                        sweeping_step(sweeping_step),
                                                                        m_wall_distance{wall_distance} {
         set_rotation_angles(rotation_angles);
@@ -23,9 +24,9 @@ namespace mstsp_solver {
                          const MapPolygon &polygon,
                          double sweeping_step,
                          double wall_distance,
-                         const EnergyCalculator &energy_calculator,
+                         EnergyCalculator energy_calculator,
                          size_t number_of_edges_rotations) : index(index), polygon(polygon),
-                                                             energy_calculator(energy_calculator),
+                                                             energy_calculator(std::move(energy_calculator)),
                                                              sweeping_step(sweeping_step),
                                                              m_wall_distance{wall_distance} {
 

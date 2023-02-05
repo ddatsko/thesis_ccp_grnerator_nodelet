@@ -6,10 +6,8 @@
 #include <utility>
 #include "mstsp_solver/Insertion.h"
 #include "algorithms.hpp"
-#include <iostream>
 #include <algorithm>
 #include <list>
-#include <ros/ros.h>
 
 
 // TODO: Move these function to some other place in the application. Maybe, to utils and then move the point_heading_t struct there too
@@ -39,19 +37,21 @@ std::vector<point_heading_t<double>> add_path_heading(const vpdd &init, double h
 }
 
 
-
 namespace mstsp_solver {
 
     MstspSolver::MstspSolver(SolverConfig config, const std::vector<MapPolygon> &decomposed_polygons,
-                             const EnergyCalculator &energy_calculator,
-                             ShortestPathCalculator shortest_path_calculator) : m_config(std::move(config)),
-                                                                                       m_energy_calculator(
-                                                                                               energy_calculator),
-                                                                                       m_shortest_path_calculator(std::move(
-                                                                                               shortest_path_calculator)) {
+                             EnergyCalculator energy_calculator,
+                             ShortestPathCalculator shortest_path_calculator) : m_logger(
+            std::make_shared<loggers::SimpleLogger>()),
+                                                                                m_config(std::move(config)),
+                                                                                m_energy_calculator(std::move(
+                                                                                        energy_calculator)),
+                                                                                m_shortest_path_calculator(std::move(
+                                                                                        shortest_path_calculator)) {
 
         for (size_t i = 0; i < decomposed_polygons.size(); ++i) {
-            m_target_sets.emplace_back(i, decomposed_polygons[i], m_config.sweeping_step, m_config.wall_distance, m_energy_calculator,
+            m_target_sets.emplace_back(i, decomposed_polygons[i], m_config.sweeping_step, m_config.wall_distance,
+                                       m_energy_calculator,
                                        m_config.rotations_per_cell);
         }
     }
@@ -65,19 +65,22 @@ namespace mstsp_solver {
         for (size_t i = 0; i + 1 < path.size(); ++i) {
             energy += path[i].energy_consumption;
             energy += m_energy_calculator.calculate_straight_line_energy(0,
-                                                                         -m_energy_calculator.get_average_acceleration(),
-                                                                         0,
                                                                          m_energy_calculator.get_average_acceleration(),
+                                                                         0,
+                                                                         -m_energy_calculator.get_average_acceleration(),
                                                                          path[i].end_point,
                                                                          path[i + 1].starting_point);
+//            m_logger->log_warn("Energy between points: " + std::to_string(energy));
             // TODO: think if really the shortest path calculation is needed. It works at least in O(N^2) but with caching.
 //            auto path_between_polygons = m_shortest_path_calculator.shortest_path_between_points(path[i].end_point, path[i + 1].starting_point);
 //            energy += m_energy_calculator.calculate_path_energy_consumption(path_between_polygons);
         }
         energy += path[path.size() - 1].energy_consumption;
         auto a = m_energy_calculator.get_average_acceleration();
-        energy += m_energy_calculator.calculate_straight_line_energy(0, a, 0, -a, m_config.starting_point, path[0].starting_point);
-        energy += m_energy_calculator.calculate_straight_line_energy(0, a, 0, -a, path[path.size() - 1].end_point, m_config.starting_point);
+        energy += m_energy_calculator.calculate_straight_line_energy(0, a, 0, -a, m_config.starting_point,
+                                                                     path[0].starting_point);
+        energy += m_energy_calculator.calculate_straight_line_energy(0, a, 0, -a, path[path.size() - 1].end_point,
+                                                                     m_config.starting_point);
 
         return energy;
     }
@@ -130,7 +133,7 @@ namespace mstsp_solver {
             std::sort(possible_insertions.begin(), possible_insertions.end(),
                       [](const Insertion &i1, const Insertion &i2) { return i1.solution_cost < i2.solution_cost; });
 //            target_sets.erase(target_sets.begin());
-//            std::cout << "Possible insertions number" << possible_insertions.size() << std::endl;
+            m_logger->log_debug("Possible insertions number " + std::to_string(possible_insertions.size()));
             size_t size_reduced = possible_insertions.size() / 4;
             // Could generate random numbers better, but let it be. We don't need a perfect uniformity
             size_t random = generate_random_number() % (size_reduced + 1);
@@ -150,11 +153,11 @@ namespace mstsp_solver {
     }
 
 
-
-    std::vector<std::vector<point_heading_t<double>>> MstspSolver::get_drones_paths(const _instance_solution_t &solution) const {
+    std::vector<std::vector<point_heading_t<double>>>
+    MstspSolver::get_drones_paths(const _instance_solution_t &solution) const {
         std::vector<std::vector<point_heading_t<double>>> res;
         int unique_altitude_id = 0;
-        for (const auto & i : solution) {
+        for (const auto &i: solution) {
             res.push_back(path_with_heading(i, unique_altitude_id++));
         }
         return res;
@@ -164,33 +167,41 @@ namespace mstsp_solver {
         return remove_path_heading(path_with_heading(targets, 10));
     }
 
-    std::vector<point_heading_t<double>> MstspSolver::path_with_heading(const std::vector<Target> &targets, int unique_alt_id) const {
+    std::vector<point_heading_t<double>>
+    MstspSolver::path_with_heading(const std::vector<Target> &targets, int unique_alt_id) const {
         double unique_alt = m_config.sweeping_step;
         if (unique_alt_id % 2 == 0) {
             unique_alt = m_config.sweeping_alt + ((unique_alt_id / 2) + 1) * m_config.unique_alt_step;
         } else {
             unique_alt = m_config.sweeping_alt - ((unique_alt_id - 1) / 2 + 1) * m_config.unique_alt_step;
         }
-        
+
         std::vector<point_heading_t<double>> res;
         res.emplace_back(m_config.starting_point);
         res.front().z = unique_alt;
 
         double last_heading = 0;
-        for (const auto & target : targets) {
+        for (const auto &target: targets) {
             // Calculate the path from previous target to this one using the shortest path calculator
-            auto path_to_target = add_path_heading(m_shortest_path_calculator.shortest_path_between_points({res.back().x, res.back().y}, target.starting_point), last_heading, unique_alt);
+            auto path_to_target = add_path_heading(
+                    m_shortest_path_calculator.shortest_path_between_points({res.back().x, res.back().y},
+                                                                            target.starting_point), last_heading,
+                    unique_alt);
             path_to_target.pop_back();
             path_to_target.erase(path_to_target.begin());
 
             res.insert(res.end(), path_to_target.begin(), path_to_target.end());
 
             auto path = add_path_heading(sweeping(m_target_sets[target.target_set_index].polygon, target.rotation_angle,
-                                 m_config.sweeping_step, m_config.wall_distance, target.first_line_up), target.rotation_angle, m_config.sweeping_alt);
+                                                  m_config.sweeping_step, m_config.wall_distance, target.first_line_up),
+                                         target.rotation_angle, m_config.sweeping_alt);
             res.insert(res.end(), path.begin(), path.end());
             last_heading = target.rotation_angle;
         }
-        auto path_to_start = add_path_heading(m_shortest_path_calculator.shortest_path_between_points({res.back().x, res.back().y}, m_config.starting_point), last_heading, unique_alt);
+        auto path_to_start = add_path_heading(
+                m_shortest_path_calculator.shortest_path_between_points({res.back().x, res.back().y},
+                                                                        m_config.starting_point), last_heading,
+                unique_alt);
         path_to_start.erase(path_to_start.begin());
 
         res.insert(res.end(), path_to_start.begin(), path_to_start.end());
@@ -198,9 +209,8 @@ namespace mstsp_solver {
     }
 
 
-
     final_solution_t MstspSolver::solve() const {
-        ROS_INFO_STREAM("[PathGenerator]: Solving started");
+        m_logger->log_info("Solving started");
         _instance_solution_t init_solution = greedy_random();
         size_t nodes = 0;
         for (const auto &uav_path: init_solution) {
@@ -226,10 +236,11 @@ namespace mstsp_solver {
 
         while (!stop_criteria) {
             if (iteration % 50 == 0) {
-                std::cout << "==================================================\n";
-                std::cout << "Iteration: " << iteration << std::endl;
-                std::cout << "Iteration with no improvement: " << no_improvement_iteration << std::endl;
-                std::cout << "Best solution cost: " << best_solution_cost.max_path_cost << ", " << best_solution_cost.path_cost_sum << std::endl;
+                m_logger->log_debug("==================================================");
+                m_logger->log_debug("Iteration: " + std::to_string(iteration));
+                m_logger->log_debug("Iteration with no improvement: " + std::to_string(no_improvement_iteration));
+                m_logger->log_debug("Best solution cost: " + std::to_string(best_solution_cost.max_path_cost) + ", "
+                                    + std::to_string(best_solution_cost.path_cost_sum));
             }
             ++iteration;
             best_neighbourhood_cost = solution_cost_t::max();

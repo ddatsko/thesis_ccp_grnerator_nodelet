@@ -1,4 +1,5 @@
 #include <PathGenerator.h>
+#include <LoggerRos.h>
 
 /* every nodelet must include macros which export the class as a nodelet plugin */
 #include <pluginlib/class_list_macros.h>
@@ -14,6 +15,7 @@
 #include "mstsp_solver/SolverConfig.h"
 #include "mstsp_solver/MstspSolver.h"
 #include <thesis_path_generator/GeneratePaths.h>
+#include "LoggerRos.h"
 
 namespace path_generation {
 
@@ -63,6 +65,10 @@ namespace path_generation {
         m_generate_paths_service_server = nh.advertiseService("/generate_paths",
                                                               &PathGenerator::callback_generate_paths, this);
 
+        m_shared_logger = std::make_shared<loggers::RosLogger>();
+        m_shared_logger->set_log_level(loggers::LOG_DEBUG);
+
+
         ROS_INFO_ONCE("[PathGenerator]: initialized");
 
         m_is_initialized = true;
@@ -102,6 +108,7 @@ namespace path_generation {
 
         // Create the energy calculator from user-defines parameters
         EnergyCalculator energy_calculator{energy_config};
+        energy_calculator.set_logger(m_shared_logger);
         ROS_INFO_STREAM("[PathGenerator]: Optimal speed: " << energy_calculator.get_optimal_speed());
 
         // Decompose the polygon
@@ -116,12 +123,19 @@ namespace path_generation {
 
         mstsp_solver::final_solution_t best_solution;
         try {
-            auto f = [&](int n){return solve_for_uavs(n, req, polygon, energy_calculator, shortest_path_calculator, gps_transform_origin);};
+            auto f = [&](int n) {
+                return solve_for_uavs(n, req, polygon, energy_calculator, shortest_path_calculator,
+                                      gps_transform_origin);
+            };
             best_solution = generate_with_constraints(req.max_single_path_energy * 3600, req.number_of_drones, f);
         } catch (const polygon_decomposition_error &e) {
             ROS_ERROR("[PathGenerator]: Error while decomposing the polygon");
             res.success = false;
             res.message = "Error while decomposing the polygon";
+            return true;
+        } catch (const std::runtime_error &e) {
+            ROS_ERROR_STREAM("[PathGenerator]: Error while solving for polygons: " << e.what());
+            res.success = false;
             return true;
         }
         auto best_paths = best_solution.paths;
@@ -211,8 +225,13 @@ namespace path_generation {
                                   std::pair<double, double> gps_transform_origin) {
         auto init_polygon = polygon;
         // TODO: make a parameter taken from message here as it directly influences the computation time
-        auto best_initial_rotations = n_best_init_decomp_angles(polygon, 4,
+        auto best_initial_rotations = n_best_init_decomp_angles(polygon, 15,
                                                                 static_cast<decomposition_type_t>(req.decomposition_method));
+
+        ROS_INFO_STREAM("Calculated best rotations: ");
+        for (const auto &rot: best_initial_rotations) {
+            ROS_INFO_STREAM(rot);
+        }
 
         // Run algorithm for each rotation and save the best result
         double best_solution_cost = std::numeric_limits<double>::max();
@@ -231,8 +250,15 @@ namespace path_generation {
 
             // Divide large polygons into smaller ones to meet the constraint on the lowest number of sub polygons
             ROS_INFO_STREAM("[PathGenerator]: Dividing large polygons into smaller ones");
-            auto polygons_divided = split_into_number(polygons_decomposed,
-                                                      static_cast<size_t>(n_uavs) * req.min_sub_polygons_per_uav);
+            std::vector<MapPolygon> polygons_divided;
+            try {
+                polygons_divided = split_into_number(polygons_decomposed,
+                                                     static_cast<size_t>(n_uavs) * req.min_sub_polygons_per_uav);
+            } catch (std::runtime_error &e) {
+                ROS_WARN_STREAM("[PathGenerator]: ERROR while dividing polygon: " << e.what());
+                return best_solution;
+
+            }
             for (auto &p: polygons_divided) {
                 p = p.rotated(-rotation);
             }
@@ -248,7 +274,7 @@ namespace path_generation {
             solver_config.wall_distance = req.wall_distance;
             mstsp_solver::MstspSolver solver(solver_config, polygons_decomposed, energy_calculator,
                                              shortest_path_calculator);
-
+            solver.set_logger(m_shared_logger);
 
             auto solver_res = solver.solve();
 
@@ -259,7 +285,6 @@ namespace path_generation {
                 ROS_INFO_STREAM("[PathGenerator]: best solution rotation: " << rotation / M_PI * 180 << std::endl);
             }
         }
-
         return best_solution;
     }
 
