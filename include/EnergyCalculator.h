@@ -63,6 +63,7 @@ private:
     double v_r; // speed at which the drone can cover the longest range [m/s]
     double t_r; // Time during thich the drone can fly with the speed v_r [s]
     double P_r; // Power consumption during movement with the speed v_r
+    double P_h; // Power consumption during hover
 
     /*!
      * Calculate the angle between segment (p1, p2) and segment (p2, p3) in radians
@@ -146,9 +147,22 @@ public:
      */
     [[nodiscard]] double get_optimal_speed() const { return v_r; }
 
+
+    /*!
+     * Calculate the energy spent to accelerate UAV from velocity v_in tp v_out in time time
+     * @param v_in Starting velocity
+     * @param v_out End velocity
+     * @param time Time of acceleration
+     * @return Energy spent
+     */
+    double calculate_acceleration_energy(double v_in, double v_out, double time) const;
+
+
     void set_logger(std::shared_ptr<loggers::SimpleLogger> new_logger) {
         m_logger = std::move(new_logger);
     }
+
+
 
 };
 

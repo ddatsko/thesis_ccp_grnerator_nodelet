@@ -16,10 +16,6 @@ namespace {
     const double RANGE_POWER_CONSUMPTION_COEFF = 1.092; // taken from (17), ratio of power consumption when maximizing the range to power consumption on hover
     const double MOTOR_EFFICIENCY = 1; // Efficiency of the motor (ratio of electric power converted to mechanical)
 
-    double cot(double angle) {
-        return 1 / std::tan(angle);
-    }
-
 }
 
 double EnergyCalculator::angle_between_points(std::pair<double, double> p0, std::pair<double, double> p1,
@@ -47,9 +43,9 @@ EnergyCalculator::EnergyCalculator(const energy_calculator_config_t &energy_calc
 //    std::cout << v_i_h << std::endl;
     // Power consumption on hover
 //  double P_h = (std::sqrt(config.number_of_propellers) * config.drone_mass * EARTH_GRAVITY * v_i_h) / (PROPELLER_EFFICIENCY); // (5)
-    double P_h = std::sqrt(std::pow(config.drone_mass * EARTH_GRAVITY, 3)) /
-                 (PROPELLER_EFFICIENCY * config.propeller_radius *
-                  std::sqrt(2 * AIR_DENSITY * M_PI * config.number_of_propellers));
+    P_h = std::sqrt(std::pow(config.drone_mass * EARTH_GRAVITY, 3)) /
+          (PROPELLER_EFFICIENCY * config.propeller_radius *
+           std::sqrt(2 * AIR_DENSITY * M_PI * config.number_of_propellers));
 
     // Power consumption when maximizing the range
     P_r = P_h * RANGE_POWER_CONSUMPTION_COEFF; // (17)
@@ -76,7 +72,9 @@ EnergyCalculator::EnergyCalculator(const energy_calculator_config_t &energy_calc
 
     v_r = v_i_h / v_r_inv;
 
-    m_logger->log_info("[PathGenerator]: ENERGY CALCULATOR: Optimal speed: " + std::to_string(v_r) + "Time of flight: " + std::to_string(t_r));
+    m_logger->log_info(
+            "[PathGenerator]: ENERGY CALCULATOR: Optimal speed: " + std::to_string(v_r) + "Time of flight: " +
+            std::to_string(t_r));
 }
 
 turning_properties_t EnergyCalculator::calculate_turning_properties(double angle) const {
@@ -90,23 +88,27 @@ turning_properties_t EnergyCalculator::calculate_turning_properties(double angle
         return {v_r, -config.average_acceleration, v_r, config.average_acceleration, 0};
     }
 
+    // Updated algorithm version
     double phi = M_PI - angle;
-    double d_vx = v_r * std::sin(phi);
-    double d_vy = std::abs(v_r - std::cos(phi) * v_r);
-    double omega_acc = std::asin(d_vy / std::sqrt(d_vx * d_vx + d_vy * d_vy));
-    double a_before = -config.average_acceleration * std::sin(omega_acc);
-    double a_after = config.average_acceleration * std::cos(omega_acc + (M_PI_2 - phi));
+    double phi_2 = (M_PI - angle) / 2;
+    double d_x = config.allowed_path_deviation;
+    double a_x = config.average_acceleration * std::cos(phi_2);
+    double a_y = config.average_acceleration * std::sin(phi_2);
 
+    double dv_x = std::sqrt(2 * d_x * a_x);
+    dv_x = std::min(dv_x, std::cos(M_PI_2 - phi) * v_r / 2);
 
-    double v_tx = std::min(d_vx / 2, std::sqrt(
-            2 * config.allowed_path_deviation * config.average_acceleration * std::cos(omega_acc)));
-    double v_ty = v_tx / std::tan((M_PI - angle) / 2);
+    double dv_y = std::tan(phi_2) * dv_x;
+    double vy_m = dv_x / std::tan(phi_2);
 
-    double energy = config.drone_mass * 0.5 * (std::pow(d_vx, 2) + std::pow(d_vy, 2));
+    double v_in = vy_m + dv_y;
 
-    double d_vym = std::min(v_ty + (v_tx * cot((M_PI - phi) / 2)), v_r);
+    // Velocities after the turn
+    double v_x = cos(M_PI_2 - phi) * v_r;
+    double v_y = sin(M_PI_2 - phi) * v_r;
+    double energy = config.drone_mass * (v_r * v_r - v_in * v_in + 0.5 * (v_in * v_in - v_y * v_y + v_x * v_x));
 
-    return {v_ty, a_before, v_ty, a_after, energy, d_vym};
+    return {v_in, -a_y, v_in, a_y, energy, vy_m};
 }
 
 double EnergyCalculator::calculate_straight_line_energy(double v_in, double a_in, double v_out, double a_out,
@@ -120,7 +122,9 @@ double EnergyCalculator::calculate_straight_line_energy(double v_in, double a_in
 
 
     if (s_acc + s_dec <= s_tot) {
-        return (t_acc + t_dec) * P_r + ((s_tot - s_acc - s_dec) / v_r) * P_r;
+        return ((s_tot - s_acc - s_dec) / v_r) * P_r +
+                calculate_acceleration_energy(v_in, v_r, t_acc) +
+                calculate_acceleration_energy(v_out, v_r, t_dec);
     } else {
         return calculate_short_line_energy(v_in, a_in, v_out, a_out, s_tot);
     }
@@ -136,21 +140,24 @@ double EnergyCalculator::calculate_straight_line_energy_between_turns(const turn
                                                                       const turning_properties_t &turn2,
                                                                       double s_tot) const {
 
-    double t_acc_slow = std::abs(turn1.d_vym - turn1.v_after) / turn1.a_after;
-    double s_acc_slow = turn1.v_after * t_acc_slow + 0.5 * turn1.a_after * std::pow(t_acc_slow, 2);
+    double t_acc_slow = std::abs((turn1.v_after - turn1.d_vym) / turn1.a_after);
+    double s_acc_slow = turn1.d_vym * t_acc_slow + 0.5 * turn1.a_after * std::pow(t_acc_slow, 2);
 
-    double t_dec_slow = std::abs((turn2.d_vym - turn2.v_before) / turn2.a_before);
-    double s_dec_slow = v_r * t_dec_slow + 0.5 * turn2.a_before * std::pow(t_dec_slow, 2);
+    double t_dec_slow = std::abs((turn2.v_before - turn2.d_vym) / turn2.a_before);
+    double s_dec_slow = turn2.v_before * t_dec_slow + 0.5 * turn2.a_before * std::pow(t_dec_slow, 2);
 
 
     // If the segment is not too short for at least slow acceleration and slow deceleration -- do it
     if (s_acc_slow + s_dec_slow < s_tot) {
-        return calculate_straight_line_energy(turn1.d_vym, config.average_acceleration, turn2.d_vym,
+        double slow_acceleration_energy = calculate_acceleration_energy(turn1.d_vym, turn1.v_after, t_acc_slow);
+        slow_acceleration_energy += calculate_acceleration_energy(turn2.d_vym, turn2.v_after, t_dec_slow);
+
+        return calculate_straight_line_energy(turn1.v_after, config.average_acceleration, turn2.v_before,
                                               -config.average_acceleration, s_tot - s_acc_slow - s_dec_slow) +
-               P_r * (t_dec_slow + t_acc_slow);
+               slow_acceleration_energy;
     } else {
         // If the UAV can only start the slow deceleration after the slow acceleration
-        return calculate_short_line_energy(turn1.v_after, turn1.a_after, turn2.v_before, turn2.a_before,
+        return calculate_short_line_energy(turn1.d_vym, turn1.a_after, turn2.d_vym, turn2.a_before,
                                            s_tot);
     }
 }
@@ -164,9 +171,10 @@ EnergyCalculator::calculate_short_line_energy(double v_in, double a_in, double v
     auto v_sol = std::sqrt(
             (v_in * v_in / a_in + v_out * v_out / std::abs(a_out) + 2 * s) / (1 / a_in + 1 / std::abs(a_out)));
 
+    // If there is no solution as it's impossible to enter and leave the segment with specified speeds having these accelerations
     if (std::isnan(v_sol) || v_sol < v_in || v_sol < v_out || v_sol > v_r) {
         auto middle_speed = (v_out + v_in) / 2;
-        return s / middle_speed * P_r;
+        return s / middle_speed * (P_h + (P_r - P_h) * middle_speed / v_r);
     }
     double t_acc = (v_sol - v_in) / a_in;
     double s_acc = v_in * t_acc + 0.5 * a_in * t_acc * t_acc;
@@ -177,11 +185,10 @@ EnergyCalculator::calculate_short_line_energy(double v_in, double a_in, double v
 //    std::cout << "Solution: " << t_acc << ", " << s_acc << ", " << t_dec << ", " << s_dec << std::endl;
 
     if (s_acc > 0 && s_dec > 0) {
-
-        return (t_acc + t_dec) * P_r;
+        return calculate_acceleration_energy(v_in, v_sol, t_acc) + calculate_acceleration_energy(v_out, v_sol, t_dec);
     }
 
-//    m_logger->log_debug("Warning: To short segment");
+    m_logger->log_debug("Warning: Too short segment");
     return 0.0;
 }
 
@@ -213,8 +220,19 @@ double EnergyCalculator::calculate_path_energy_consumption(const std::vector<std
 
     for (size_t i = 0; i + 1 < path_filtered.size(); ++i) {
         total_energy += turns[i].energy;
-        auto energy = calculate_straight_line_energy_between_turns(turns[i], turns[i + 1], distance_between_points(path_filtered[i], path_filtered[i + 1]));
+        auto energy = calculate_straight_line_energy_between_turns(turns[i], turns[i + 1],
+                                                                   distance_between_points(path_filtered[i],
+                                                                                           path_filtered[i + 1]));
         total_energy += energy;
     }
     return total_energy;
+}
+
+
+double EnergyCalculator::calculate_acceleration_energy(double v_in, double v_out, double time) const {
+    // For now, just find the average speed as an arithmetic average between v_in and v_out, which is wrong
+    // TODO: make this better
+    double avg_speed = (v_in + v_out) / 2;
+    double keeping_speed_energy = time * (P_h + avg_speed / v_r * (P_r - P_h));
+    return keeping_speed_energy;
 }

@@ -22,7 +22,7 @@ namespace {
     /*!
      * Add new polygon detected by trapezoidal decomposition to the existing set of polygons
      * Merges the polygon with an existing one if new polygon's left edge is
-     * one of the edges of the existing one and merge_to_boustrophedon is set to true
+     * one of the edges of the existing one if it fits the requirements of decomposition_type
      * @warning Because of the whole algorithm specifications, here the following assumption is made:
      *    Each polygon points start with {lower(leftmost points), upper(leftmost point)}.
      *    So, points are in clockwise order, starting with lower of left point (there are at leads 2 of them)
@@ -70,6 +70,7 @@ namespace {
                         new_polygon.fly_zone_polygon_points.begin() + static_cast<long>(2),
                         new_polygon.fly_zone_polygon_points.end() - 1);
 
+                // If the decomposition type requires convex polygons and the resulting one is not, just add it as it is
                 if (decomposition_type == BOUSTROPHEDON_WITH_CONVEX_POLYGONS &&
                     !polygon_convex(p.fly_zone_polygon_points)) {
                     p = p_old;
