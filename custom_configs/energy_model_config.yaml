@@ -18,8 +18,9 @@ best_speed_model:
 
 drone_mass: 0.9 # [kg]
 drone_area: 0.0215 # [m^2]
-average_acceleration: 10 # DEPRECATED. TODO: remove this
+average_acceleration: 10 # m/s^2
 propeller_radius: 0.119 # m
 number_of_propellers: 4
 allowed_path_deviation: 0.5 # m
+number_of_rotations: 5 # Number of initial rotations to try. The complexity will increase linearly with this term
 

@@ -51,6 +51,7 @@ namespace path_generation {
 
         /* other parameters */
         int sequence_counter = 0;
+        int m_number_of_rotations;
 
 
         // | --------------------- MRS transformer -------------------- |
@@ -58,6 +59,8 @@ namespace path_generation {
         // | ---------------------- msg callbacks --------------------- |
 
         ros::ServiceServer m_generate_paths_service_server;
+        ros::Publisher m_path_publisher;
+
 
         bool callback_generate_paths(thesis_path_generator::GeneratePaths::Request &req,
                                      thesis_path_generator::GeneratePaths::Response &res);

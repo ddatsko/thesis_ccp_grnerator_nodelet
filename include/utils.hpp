@@ -73,13 +73,6 @@ double angle_between_vectors(point_t p1, point_t p2, point_t p3);
  */
 double distance_between_points(point_t p1, point_t p2);
 
-// TODO: remove this and rewrite the KML parsing functions
-/*!
- * @deprecated
- * Convert gps coordinates to meters as distance to the equator and distance to 0 meridian.
- * @note if points are not close to the equator, makes everything look weirdly
- */
-point_t gps_coordinates_to_meters(point_t p);
 
 /*!
  * @note this and mirrored functions work well only in small scale as the Earth is not flat

@@ -37,7 +37,7 @@ struct turning_properties_t {
     double v_after;
     double a_after;
     double energy;
-    double d_vym = 0.0;
+    double d_vym;
 };
 
 /*! 
@@ -65,15 +65,8 @@ private:
     double P_r; // Power consumption during movement with the speed v_r
     double P_h; // Power consumption during hover
 
-    /*!
-     * Calculate the angle between segment (p1, p2) and segment (p2, p3) in radians
-     * @param p1: coordinates of a start point
-     * @param p2: coordinates of middle point
-     * @param p3: coordinates of the third point
-     * @return The angle in radians in range (0..PI)
-     */
-    [[nodiscard]] static double
-    angle_between_points(std::pair<double, double> p0, std::pair<double, double> p1, std::pair<double, double> p2);
+    mutable double m_total_path_time = 0.0;
+
 
     /*!
      * Calculate the energy spent on turning manuver including the deceleration and acceleration
@@ -84,6 +77,17 @@ private:
     [[nodiscard]] turning_properties_t calculate_turning_properties(double angle) const;
 
 public:
+
+    /*!
+     * Calculate the angle between segment (p1, p2) and segment (p2, p3) in radians
+     * @param p1: coordinates of a start point
+     * @param p2: coordinates of middle point
+     * @param p3: coordinates of the third point
+     * @return The angle in radians in range (0..PI)
+     */
+    [[nodiscard]] static double
+    angle_between_points(std::pair<double, double> p0, std::pair<double, double> p1, std::pair<double, double> p2);
+
     /*!
      * Calculate the energy for moving on the straight line. The acceleration and deceleration times are encountered, but the
      * energy needed to perform the acceleration of deceleration is not encountered (as it should be
@@ -121,7 +125,9 @@ public:
     [[nodiscard]] double
     calculate_short_line_energy(double v_in, double a_in, double v_out, double a_out, double s) const;
 
-    explicit EnergyCalculator(const energy_calculator_config_t &energy_calculator_config);
+    explicit EnergyCalculator(const energy_calculator_config_t &energy_calculator_config): EnergyCalculator(energy_calculator_config, std::make_shared<loggers::SimpleLogger>()) {};
+
+    EnergyCalculator(const energy_calculator_config_t &energy_calculator_config, std::shared_ptr<loggers::SimpleLogger> logger);
 
     EnergyCalculator() = delete;
 
@@ -155,14 +161,20 @@ public:
      * @param time Time of acceleration
      * @return Energy spent
      */
-    double calculate_acceleration_energy(double v_in, double v_out, double time) const;
+    [[nodiscard]] double calculate_acceleration_energy(double v_in, double v_out, double time) const;
 
 
     void set_logger(std::shared_ptr<loggers::SimpleLogger> new_logger) {
         m_logger = std::move(new_logger);
     }
 
+    void reset_path_time() { m_total_path_time = 0; };
 
+    [[nodiscard]] double get_total_path_time() const { return m_total_path_time; };
+
+    [[nodiscard]] double get_hover_power() const { return P_h; };
+
+    [[nodiscard]] double get_optimal_speed_power() const { return P_r; };
 
 };
 

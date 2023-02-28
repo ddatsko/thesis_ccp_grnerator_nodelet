@@ -16,6 +16,7 @@
 #include "mstsp_solver/MstspSolver.h"
 #include <thesis_path_generator/GeneratePaths.h>
 #include "LoggerRos.h"
+#include <mrs_msgs/Path.h>
 
 namespace path_generation {
 
@@ -52,6 +53,7 @@ namespace path_generation {
         pl.loadParam("propeller_radius", m_energy_config.propeller_radius);
         pl.loadParam("number_of_propellers", m_energy_config.number_of_propellers);
         pl.loadParam("allowed_path_deviation", m_energy_config.allowed_path_deviation);
+        pl.loadParam("number_of_rotations", m_number_of_rotations);
 
 
         if (!pl.loadedSuccessfully()) {
@@ -64,6 +66,8 @@ namespace path_generation {
 
         m_generate_paths_service_server = nh.advertiseService("/generate_paths",
                                                               &PathGenerator::callback_generate_paths, this);
+        m_path_publisher = nh.advertise<mrs_msgs::Path>("path_generation/generated_path", 100);
+
 
         m_shared_logger = std::make_shared<loggers::RosLogger>();
         m_shared_logger->set_log_level(loggers::LOG_DEBUG);
@@ -161,6 +165,7 @@ namespace path_generation {
             auto generated_path = _generate_path_for_simulation_one_drone(best_paths[i], gps_transform_origin,
                                                                           energy_calculator.get_optimal_speed(),
                                                                           energy_config.average_acceleration);
+            m_path_publisher.publish(generated_path);
             res.paths_gps[i] = generated_path;
         }
         return true;
@@ -225,7 +230,7 @@ namespace path_generation {
                                   std::pair<double, double> gps_transform_origin) {
         auto init_polygon = polygon;
         // TODO: make a parameter taken from message here as it directly influences the computation time
-        auto best_initial_rotations = n_best_init_decomp_angles(polygon, 15,
+        auto best_initial_rotations = n_best_init_decomp_angles(polygon, m_number_of_rotations,
                                                                 static_cast<decomposition_type_t>(req.decomposition_method));
 
         ROS_INFO_STREAM("Calculated best rotations: ");

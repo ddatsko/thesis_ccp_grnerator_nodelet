@@ -27,13 +27,13 @@ namespace loggers {
     public:
         void set_log_level(LoggerLevel level) { m_log_level = level; };
 
-        virtual void log_info(const std::string &s) { if (m_log_level <= LOG_INFO) std::cout << s; };
+        virtual void log_info(const std::string &s) { if (m_log_level <= LOG_INFO) std::cout << s << std::endl; };
 
-        virtual void log_debug(const std::string &s) { if (m_log_level <= LOG_DEBUG) std::cout << s; };
+        virtual void log_debug(const std::string &s) { if (m_log_level <= LOG_DEBUG) std::cout << s << std::endl; };
 
-        virtual void log_warn(const std::string &s) { if (m_log_level <= LOG_WARN) std::cout << s; };
+        virtual void log_warn(const std::string &s) { if (m_log_level <= LOG_WARN) std::cout << s << std::endl; };
 
-        virtual void log_err(const std::string &s) { if (m_log_level <= LOG_ERR) std::cout << s; };
+        virtual void log_err(const std::string &s) { if (m_log_level <= LOG_ERR) std::cout << s << std::endl; };
 
         virtual ~SimpleLogger() = default;
     };
