@@ -1,32 +1,15 @@
 #include "MapPolygon.hpp"
-#include <pugixml.hpp>
 #include <iostream>
 #include "utils.hpp"
 #include <algorithm>
 #include <stdexcept>
 #include <cmath>
-//#include <ros/ros.h>
 #include "algorithms.hpp"
 
 // TODO: make most of methods external functions (maybe, working on not MapPolygons but just on vector<pair<double, double>>
 // TODO: make use of some external polygons library like
 namespace {
-    const std::string FLY_ZONE_PLACEMARK_NAME = "fly-zone";
-    const std::string NO_FLY_ZONE_PLACEMARK_NAME = "no-fly-zone";
-
     const double SPLIT_BIN_SEARCH_THRESH = 1;
-
-    point_t string_to_point(const std::string &point_string) {
-        size_t coma_pos;
-        point_t point;
-        try {
-            point.first = std::stod(point_string, &coma_pos);
-            point.second = std::stod(point_string.substr(coma_pos + 1));
-        } catch (std::invalid_argument &e) {
-            throw kml_file_parse_error{"Could not convert string '" + point_string + "' too coordinates..."};
-        }
-        return point;
-    }
 
     double get_mean_x(const polygon_t &pol) {
         double res = pol[0].first;
@@ -44,80 +27,12 @@ namespace {
         }
         return {leftmost_x, rightmost_x};
     }
-
-}
-
-MapPolygon::polygon_t get_points_from_string(std::string kml_file_string) {
-    // Strip the string
-    kml_file_string.erase(kml_file_string.find_last_not_of(" \t\n\r\f\v") + 1);
-    kml_file_string.erase(0, kml_file_string.find_first_not_of(" \t\n\r\f\v"));
-
-    polygon_t points;
-
-    // Split the string by spaces and add each point to the vector of internal points
-    size_t pos;
-    while (!kml_file_string.empty()) {
-        pos = kml_file_string.find(' ');
-        std::string point_string = kml_file_string.substr(0, pos);
-        if (pos == std::string::npos) {
-            kml_file_string = std::string();
-        } else {
-            kml_file_string.erase(0, pos + 1);
-        }
-        if (point_string.empty()) {
-            continue;
-        }
-        points.push_back(gps_coordinates_to_meters(string_to_point(point_string)));
-//        points.push_back(string_to_point(point_string));
-    }
-
-    make_polygon_clockwise(points);
-    return points;
 }
 
 MapPolygon::MapPolygon(const MapPolygon &p) {
     fly_zone_polygon_points = p.fly_zone_polygon_points;
     no_fly_zone_polygons = p.no_fly_zone_polygons;
 }
-
-void MapPolygon::load_polygon_from_file(const std::string &filename) {
-    bool fly_zone_found = false;
-
-    // Try to load the file with described polygon
-    pugi::xml_document doc;
-    pugi::xml_parse_result result = doc.load_file(filename.c_str());
-    if (!result) {
-        throw kml_file_parse_error("Could not load kml file..");
-    }
-
-    auto document = doc.child("kml").child("Document");
-    if (document.empty()) {
-        throw kml_file_parse_error("Could not find any polygon in the kml file.");
-    }
-
-    for (const auto &placemark: document.children("Placemark")) {
-        auto placemark_polygon_points = get_points_from_string(
-                placemark.child("Polygon").child("outerBoundaryIs").child("LinearRing").child(
-                        "coordinates").text().as_string());
-        if (placemark.child("name").text().as_string() == FLY_ZONE_PLACEMARK_NAME) {
-            fly_zone_found = true;
-            fly_zone_polygon_points = placemark_polygon_points;
-            if (fly_zone_polygon_points.empty()) {
-                throw kml_file_parse_error("Could not load fly zone polygon points");
-            }
-        } else if (placemark.child("name").text().as_string() == NO_FLY_ZONE_PLACEMARK_NAME) {
-            if (placemark_polygon_points.empty()) {
-                throw kml_file_parse_error("Could not load no fly zone polygon...");
-            }
-            no_fly_zone_polygons.push_back(placemark_polygon_points);
-        }
-
-    }
-    if (not fly_zone_found) {
-        throw kml_file_parse_error("Could not find fly zone in the kml file");
-    }
-}
-
 
 MapPolygon MapPolygon::rotated(double angle) const {
     // Make a copy of this mapPolygon

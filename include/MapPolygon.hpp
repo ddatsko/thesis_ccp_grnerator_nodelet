@@ -14,11 +14,6 @@
 #include <memory>
 #include <SimpleLogger.h>
 
-
-struct kml_file_parse_error : public std::runtime_error {
-    using runtime_error::runtime_error;
-};
-
 struct non_existing_point_error : public std::runtime_error {
     using runtime_error::runtime_error;
 };
@@ -70,14 +65,6 @@ public:
 
     MapPolygon &operator=(const MapPolygon &rhs) = default;
 
-    /*!
-     * Parse a KML file and read points from it.
-     * Only points from polygons called with names "fly-zone" and "no-fly-zone" will be taken into account
-     * @param filename Path to the KML file
-     */
-    void load_polygon_from_file(const std::string &filename);
-
-    // TODO: check if get_all_points method should be a method or a separate function
     /*!
      * Get the list of all the polygons point (both fly-zone and non-fly zone)
      * @return Set of all the points

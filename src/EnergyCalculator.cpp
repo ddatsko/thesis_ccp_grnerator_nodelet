@@ -235,10 +235,10 @@ double EnergyCalculator::calculate_path_energy_consumption(const std::vector<std
 }
 
 
-double EnergyCalculator::calculate_acceleration_energy(double v_in, double v_out, double time) const {
+double EnergyCalculator::calculate_acceleration_energy([[maybe_unused]]double v_in, [[maybe_unused]]double v_out, double time) const {
     // For now, just find the average speed as an arithmetic average between v_in and v_out, which is wrong
     // TODO: make this better
-    double avg_speed = (v_in + v_out) / 2;
+//    double avg_speed = (v_in + v_out) / 2;
     double keeping_speed_energy = time * P_h;//(P_h + avg_speed / v_r * (P_r - P_h));
     return keeping_speed_energy;
 }
