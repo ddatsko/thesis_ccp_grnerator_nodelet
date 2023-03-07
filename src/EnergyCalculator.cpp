@@ -220,7 +220,6 @@ double EnergyCalculator::calculate_path_energy_consumption(const std::vector<std
     for (size_t i = 1; i + 1 < path_filtered.size(); ++i) {
         double angle = angle_between_points(path_filtered[i - 1], path_filtered[i], path_filtered[i + 1]);
         turns.push_back(calculate_turning_properties(angle));
-//        std::cout << "Puched turn: d_vym: " << turns.back().d_vym << std::endl;
     }
     turns.push_back({0, -config.average_acceleration, 0, 0, config.drone_mass * std::pow(v_r, 2) / 2, 0.0});
 

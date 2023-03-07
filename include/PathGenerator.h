@@ -20,6 +20,7 @@
 /* user includes */
 #include <mrs_lib/subscribe_handler.h>
 #include <mrs_msgs/Path.h>
+#include <mrs_msgs/PathSrv.h>
 #include <std_msgs/String.h>
 #include <vector>
 #include "EnergyCalculator.h"
@@ -27,6 +28,7 @@
 #include "utils.hpp"
 #include "mstsp_solver/MstspSolver.h"
 #include "SimpleLogger.h"
+#include <thesis_path_generator/CalculateEnergy.h>
 
 namespace path_generation {
 
@@ -58,9 +60,18 @@ namespace path_generation {
 
         // | ---------------------- msg callbacks --------------------- |
 
+        ros::ServiceServer m_calculate_energy_service_server;
         ros::ServiceServer m_generate_paths_service_server;
         ros::Publisher m_path_publisher;
 
+        /*!
+         * Callback function for ROS service for paths energy calculation
+         * @param req Service request. Contains drone parameters and paths for which energies should be calculated
+         * @param res Result message. if calculation is successful contains array of energies for each path
+         * @return false of node is not initialized still
+         */
+        bool callback_calculate_energy(thesis_path_generator::CalculateEnergy::Request &req,
+                                       thesis_path_generator::CalculateEnergy::Response &res);
 
         bool callback_generate_paths(thesis_path_generator::GeneratePaths::Request &req,
                                      thesis_path_generator::GeneratePaths::Response &res);
@@ -96,7 +107,8 @@ namespace path_generation {
          * @return Solution to the problem
          */
         template<typename F>
-        [[maybe_unused]] mstsp_solver::final_solution_t generate_with_constraints(double max_energy_bound, unsigned int n_uavs, F f) {
+        [[maybe_unused]] mstsp_solver::final_solution_t
+        generate_with_constraints(double max_energy_bound, unsigned int n_uavs, F f) {
             // Generate the initial solution that can be optimized after
             mstsp_solver::final_solution_t solution = f(n_uavs);
             if (solution.max_path_energy < max_energy_bound) {
@@ -108,7 +120,8 @@ namespace path_generation {
             while (solution.max_path_energy > max_energy_bound) {
                 // Stop if too many iterations are already done. TODO: remove the hardcoded value from here
                 if (++iteration > 10) {
-                    ROS_WARN("[PathGenerator]: could not generate paths to satisfy the upper bound on energy consumption...");
+                    ROS_WARN(
+                            "[PathGenerator]: could not generate paths to satisfy the upper bound on energy consumption...");
                     return solution;
                 }
                 // if the energy consumption is divided well, this should be enough

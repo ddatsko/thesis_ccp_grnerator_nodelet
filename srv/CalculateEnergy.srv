@@ -1,0 +1,14 @@
+nav_msgs/Path[] paths
+
+bool override_drone_parameters
+float32 drone_mass
+float32 drone_area
+float32 average_acceleration
+float32 propeller_radius
+uint8 number_of_propellers
+
+float64 allowed_path_deviation
+---
+bool success
+string message
+float64[] energies

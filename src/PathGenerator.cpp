@@ -15,6 +15,7 @@
 #include "mstsp_solver/SolverConfig.h"
 #include "mstsp_solver/MstspSolver.h"
 #include <thesis_path_generator/GeneratePaths.h>
+#include <thesis_path_generator/CalculateEnergy.h>
 #include "LoggerRos.h"
 #include <mrs_msgs/Path.h>
 
@@ -63,6 +64,8 @@ namespace path_generation {
         } else {
             ROS_INFO_ONCE("[PathGenerator]: loaded parameters");
         }
+        m_calculate_energy_service_server = nh.advertiseService("/calculate_energy",
+                                                                &PathGenerator::callback_calculate_energy, this);
 
         m_generate_paths_service_server = nh.advertiseService("/generate_paths",
                                                               &PathGenerator::callback_generate_paths, this);
@@ -77,6 +80,58 @@ namespace path_generation {
 
         m_is_initialized = true;
     }
+
+    bool PathGenerator::callback_calculate_energy(thesis_path_generator::CalculateEnergy::Request &req,
+                                                  thesis_path_generator::CalculateEnergy::Response &res) {
+        ROS_INFO_ONCE("[PathGenerator]: Path energy calculation service called");
+        if (!m_is_initialized) {
+            return false;
+        }
+
+        // Calculate energy consumption for default UAV parameters
+        auto energy_config = m_energy_config;
+
+        if (req.allowed_path_deviation != 0) {
+            energy_config.allowed_path_deviation = req.allowed_path_deviation;
+        }
+
+        if (req.override_drone_parameters) {
+            energy_config.drone_mass = req.drone_mass;
+            energy_config.drone_area = req.drone_area;
+            energy_config.number_of_propellers = req.number_of_propellers;
+            energy_config.propeller_radius = req.propeller_radius;
+            energy_config.average_acceleration = req.average_acceleration;
+        }
+        EnergyCalculator calculator{energy_config, m_shared_logger};
+
+        res.success = true;
+        try {
+            res.energies.clear();
+            for (const auto &req_path: req.paths) {
+                vpdd path;
+                path.reserve(req_path.poses.size());
+                for (const auto &p: req_path.poses) {
+                    path.emplace_back(p.pose.position.x, p.pose.position.y);
+                }
+
+                // If path is in lat_lon origin frame, convert it to metric coordinates
+                if (req_path.header.frame_id == "latlon_origin") {
+                    std::for_each(path.begin(), path.end(),
+                                  [&](auto &p) { p = gps_coordinates_to_meters(p, path[path.size() - 1]);});
+                }
+
+                auto energy = calculator.calculate_path_energy_consumption(path);
+                res.energies.push_back(energy);
+            }
+        } catch (const std::runtime_error &e) {
+            ROS_ERROR_STREAM("[PathGenerator]: " << e.what());
+            res.energies.clear();
+            res.message = e.what();
+            res.success = false;
+        }
+        return true;
+    }
+
 
     bool PathGenerator::callback_generate_paths(thesis_path_generator::GeneratePaths::Request &req,
                                                 thesis_path_generator::GeneratePaths::Response &res) {

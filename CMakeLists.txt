@@ -6,7 +6,7 @@ set(FILESNAME PathGenerator)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_compile_options(-Wall -Wextra -pedantic -Werror -Werror=vla)
+add_compile_options(-Wall -Wextra) #-pedantic -Werror -Werror=vla)
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
@@ -18,7 +18,7 @@ find_package(catkin REQUIRED COMPONENTS
   mrs_msgs
 )
 
-add_service_files (FILES GeneratePaths.srv)
+add_service_files (FILES GeneratePaths.srv CalculateEnergy.srv)
 
 find_package(OpenCV REQUIRED)
 
@@ -27,6 +27,7 @@ generate_messages(
         std_msgs
         geometry_msgs
         mrs_msgs
+        nav_msgs
 )
 
 catkin_package(
@@ -36,7 +37,7 @@ catkin_package(
 )
 
 include_directories(include
-#        /home/mrs/mrs_workspace/devel/.private/thesis_path_generator/include   # Clion cannot find headers without this for some reason. TODO: remove this
+  #      /home/mrs/workspace/devel/.private/thesis_path_generator/include   # Clion cannot find headers without this for some reason. TODO: remove this
   ${catkin_INCLUDE_DIRS}
 )
 
