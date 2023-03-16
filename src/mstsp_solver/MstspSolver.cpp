@@ -83,7 +83,7 @@ namespace mstsp_solver {
 
     double MstspSolver::get_path_cost(const std::vector<Target> &path) const {
         double energy = get_path_energy(path);
-        return energy * m_cost_constant * energy;
+        return energy;
     }
 
 
