@@ -1,7 +1,3 @@
-//
-// Created by mrs on 28.03.22.
-//
-
 #include "mstsp_solver/MstspSolver.h"
 #include <utility>
 #include "mstsp_solver/Insertion.h"
@@ -9,8 +5,6 @@
 #include <algorithm>
 #include <list>
 
-
-// TODO: Move these function to some other place in the application. Maybe, to utils and then move the point_heading_t struct there too
 vpdd remove_path_heading(const std::vector<point_heading_t<double>> &init) {
     vpdd res;
     for (const auto &p: init) {
@@ -56,7 +50,8 @@ namespace mstsp_solver {
         }
     }
 
-    double MstspSolver::get_path_cost(const std::vector<Target> &path) const {
+
+    double MstspSolver::get_path_energy(const std::vector<Target> &path) const {
         if (path.empty()) {
             return 0;
         }
@@ -82,6 +77,12 @@ namespace mstsp_solver {
         energy += m_energy_calculator.calculate_straight_line_energy(0, a, 0, -a, path[path.size() - 1].end_point,
                                                                      m_config.starting_point);
 
+        return energy;
+    }
+
+
+    double MstspSolver::get_path_cost(const std::vector<Target> &path) const {
+        double energy = get_path_energy(path);
         return energy;
     }
 

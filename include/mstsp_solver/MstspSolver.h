@@ -1,7 +1,3 @@
-//
-// Created by mrs on 28.03.22.
-//
-
 #ifndef THESIS_TRAJECTORY_GENERATOR_MSTSPSOLVER_H
 #define THESIS_TRAJECTORY_GENERATOR_MSTSPSOLVER_H
 
@@ -56,7 +52,12 @@ struct solution_cost_t {
     }
 };
 
-
+/*!
+ * TODO: move this function from here
+ * Remove the heading from path and convert it into coordinates on one 2d plane
+ * @param init Initial path
+ * @return path in a plane without heading
+ */
 std::vector<std::pair<double, double>> remove_path_heading(const std::vector<point_heading_t<double>> &init);
 
 namespace mstsp_solver {
@@ -72,9 +73,6 @@ namespace mstsp_solver {
         std::vector<std::vector<point_heading_t < double>>> paths;
     };
 
-//    struct _instance_solution_t {
-// 3
-//    };
 
 
     class MstspSolver {
@@ -102,9 +100,26 @@ namespace mstsp_solver {
         const SolverConfig m_config;
         const EnergyCalculator m_energy_calculator;
         ShortestPathCalculator m_shortest_path_calculator;
+        double m_cost_constant = 0.0001;
 
+        /*!
+         * Generate a solution using a greedy random method
+         * @return greedy solution
+         */
         _instance_solution_t greedy_random() const;
 
+        /*!
+         * Get the estimated energy consumption of the path
+         * @param path Sequence of targets, energy for which should be calculated
+         * @return Energy consumption in [W}
+         */
+        double get_path_energy(const std::vector<Target> &path) const;
+
+        /*!
+         * Calculate the cost of one path
+         * @param path Sequence of targets, cost for which should be calculated
+         * @return Path cost
+         */
         double get_path_cost(const std::vector<Target> &path) const;
 
         /*!

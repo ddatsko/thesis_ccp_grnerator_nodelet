@@ -1,7 +1,3 @@
-//
-// Created by mrs on 3.2.23.
-//
-
 #ifndef THESIS_PATH_GENERATOR_SIMPLELOGGER_H
 #define THESIS_PATH_GENERATOR_SIMPLELOGGER_H
 
