@@ -1,6 +1,7 @@
 # ROS node for generating energy-efficient complete coverage pathes for multiple uavs
 
-* Node provides a service ```/generate_paths```, taking the map as input and producing the paths for each UAV
+The node is aimed to work with the [MRS system](https://github.com/ctu-mrs/mrs_uav_system) so it uses some of [mrs_msgs](https://github.com/ctu-mrs/mrs_msgs) for communication.
 
-Stitched images after a real-world flight example:
-![best_stitched](https://user-images.githubusercontent.com/35429810/166292633-ccbe4462-5d2e-42cf-9670-57f9020effb1.jpg)
+### Functionality
+The node provides two services with customly defined message types: ```/generate_paths``` for path genreation and ```/calculate_energy``` for paths energy calculation.
+In both messages, UAV physical parameters can be specified to override default values
