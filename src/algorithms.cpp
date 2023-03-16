@@ -17,8 +17,6 @@ namespace {
         return (x - segment.first.first) * (segment.second.second - segment.first.second) /
                (segment.second.first - segment.first.first) + segment.first.second;
     }
-
-
     /*!
      * Add new polygon detected by trapezoidal decomposition to the existing set of polygons
      * Merges the polygon with an existing one if new polygon's left edge is

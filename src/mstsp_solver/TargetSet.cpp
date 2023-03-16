@@ -1,7 +1,3 @@
-//
-// Created by mrs on 28.03.22.
-//
-
 #include "mstsp_solver/TargetSet.h"
 #include "algorithms.hpp"
 #include <iostream>

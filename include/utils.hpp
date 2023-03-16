@@ -4,7 +4,6 @@
 #include <tuple>
 #include <vector>
 #include "custom_types.hpp"
-//#include "MapPolygon.hpp"
 
 using hom_t = std::tuple<double, double, double>;
 
@@ -15,7 +14,7 @@ enum decomposition_type_t {TRAPEZOIDAL_DECOMPOSITION,
     BOUSTROPHEDON_DECOMPOSITION,
     BOUSTROPHEDON_WITH_CONVEX_POLYGONS,
 
-    DECOMPOSITION_TYPES_NUMBER // This should always be the last element as it's convertion to int represents the number of elemw\ents in this enum
+    DECOMPOSITION_TYPES_NUMBER // This should always be the last element as it's conversion to int represents the number of elements in this enum
 };
 
 /*!
@@ -127,6 +126,12 @@ bool isclose(T n1, T n2, double eps) {
     return std::abs(n1 - n2) < eps;
 }
 
+/*!
+ * @param p1 First point
+ * @param p2 Second point
+ * @param eps Epsilon for each coordinate
+ * @return true if two points are closer than eps in each coordinate
+ */
 inline bool isclose(point_t p1, point_t p2, double eps) {
     return isclose(p1.first, p2.first, eps) && isclose(p1.second, p2.second, eps);
 }
@@ -147,18 +152,6 @@ std::pair<double, double> solve_quadratic(double a, double b, double c);
 point_t segment_vertical_line_intersection(const segment_t &s, double x);
 
 
-///*!
-// * Create a MapPolygon object from fly zone and no fly zones points.
-// * NOTE: this function is not in
-// * @tparam P
-// * @param fly_zone
-// * @param no_fly_zones
-// * @return
-// */
-//template <typename P>
-//MapPolygon polygon_from_boundary_points(const std::vector<P> &fly_zone, const std::vector<std::vector<P>>& no_fly_zones) {
-//
-//}
 
 #endif
 
