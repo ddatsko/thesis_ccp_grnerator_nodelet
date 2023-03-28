@@ -10,59 +10,60 @@
 #include "custom_types.hpp"
 #include <SimpleLogger.h>
 
-struct metaheuristic_application_error : public std::runtime_error {
-    using runtime_error::runtime_error;
-};
-
-// Use a custom struct.
-// The Reference3D from ROS is not used to make some modules completely independent of ROS
-template<typename T=double>
-struct point_heading_t {
-    point_heading_t() = default;
-
-    point_heading_t(T x, T y) : x{x}, y{y}, z{0}, heading{0} {};
-
-    explicit point_heading_t(std::pair<T, T> p) : x{p.first}, y{p.second}, z{0}, heading{0} {};
-    T x;
-    T y;
-    T z;
-    T heading;
-};
-
-struct solution_cost_t {
-    /*!
-     * Struct for representation the cost of one solution
-     */
-    double max_path_cost;
-    double path_cost_sum;
-
-    solution_cost_t() = delete;
-
-    static solution_cost_t max() {
-        return {std::numeric_limits<double>::max(), std::numeric_limits<double>::max()};
-    }
-
-    static solution_cost_t min() {
-        return {std::numeric_limits<double>::min(), std::numeric_limits<double>::min()};
-    }
-
-    bool operator<(const solution_cost_t &rhs) const {
-        return (max_path_cost < rhs.max_path_cost ||
-                (max_path_cost == rhs.max_path_cost && path_cost_sum < rhs.path_cost_sum));
-    }
-};
-
-/*!
- * TODO: move this function from here
- * Remove the heading from path and convert it into coordinates on one 2d plane
- * @param init Initial path
- * @return path in a plane without heading
- */
-std::vector<std::pair<double, double>> remove_path_heading(const std::vector<point_heading_t<double>> &init);
 
 namespace mstsp_solver {
-
     using _instance_solution_t = std::vector<std::vector<Target>>;
+
+    struct metaheuristic_application_error : public std::runtime_error {
+        using runtime_error::runtime_error;
+    };
+
+    // Use a custom struct.
+    // The Reference3D from ROS is not used to make some modules completely independent of ROS
+    template<typename T=double>
+    struct point_heading_t {
+        point_heading_t() = default;
+
+        point_heading_t(T x, T y) : x{x}, y{y}, z{0}, heading{0} {};
+
+        explicit point_heading_t(std::pair<T, T> p) : x{p.first}, y{p.second}, z{0}, heading{0} {};
+        T x;
+        T y;
+        T z;
+        T heading;
+    };
+
+    struct solution_cost_t {
+        /*!
+         * Struct for representation the cost of one solution
+         */
+        double max_path_cost;
+        double path_cost_sum;
+
+        solution_cost_t() = delete;
+
+        static solution_cost_t max() {
+            return {std::numeric_limits<double>::max(), std::numeric_limits<double>::max()};
+        }
+
+        static solution_cost_t min() {
+            return {std::numeric_limits<double>::min(), std::numeric_limits<double>::min()};
+        }
+
+        bool operator<(const solution_cost_t &rhs) const {
+            return (max_path_cost < rhs.max_path_cost ||
+                    (max_path_cost == rhs.max_path_cost && path_cost_sum < rhs.path_cost_sum));
+        }
+    };
+
+    /*!
+     * TODO: move this function from here
+     * Remove the heading from path and convert it into coordinates on one 2d plane
+     * @param init Initial path
+     * @return path in a plane without heading
+     */
+    std::vector<std::pair<double, double>> remove_path_heading(const std::vector<point_heading_t<double>> &init);
+
 
     /*!
      * Struct representing the final result of the solver
@@ -70,9 +71,8 @@ namespace mstsp_solver {
     struct final_solution_t {
         double max_path_energy;
         double path_energies_sum;
-        std::vector<std::vector<point_heading_t < double>>> paths;
+        std::vector<std::vector<point_heading_t<double>>> paths;
     };
-
 
 
     class MstspSolver {
@@ -100,7 +100,6 @@ namespace mstsp_solver {
         const SolverConfig m_config;
         const EnergyCalculator m_energy_calculator;
         ShortestPathCalculator m_shortest_path_calculator;
-        double m_cost_constant = 0.0001;
 
         /*!
          * Generate a solution using a greedy random method
@@ -133,7 +132,7 @@ namespace mstsp_solver {
          * @param solution  Problem solution as path consisting of Targets that need to be visited by each drone
          * @return Vector of paths for each drone (size if config.n_uavs)
          */
-        std::vector<std::vector<point_heading_t < double>>>
+        std::vector<std::vector<point_heading_t<double>>>
 
         get_drones_paths(const _instance_solution_t &solution) const;
 
@@ -152,9 +151,9 @@ namespace mstsp_solver {
          * @param unique_alt_id Id for unique altitude during changing the sub-polygon for collision avoidance
          * @return Path with the right heading
          */
-        std::vector<point_heading_t < double>> path_with_heading(
-        const std::vector<Target> &targets,
-        int unique_alt_id
+        std::vector<point_heading_t<double>> path_with_heading(
+                const std::vector<Target> &targets,
+                int unique_alt_id
         ) const;
 
         /*!

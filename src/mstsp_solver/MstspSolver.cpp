@@ -5,33 +5,33 @@
 #include <algorithm>
 #include <list>
 
-vpdd remove_path_heading(const std::vector<point_heading_t<double>> &init) {
-    vpdd res;
-    for (const auto &p: init) {
-        res.emplace_back(p.x, p.y);
-    }
-    return res;
-}
-
-std::vector<point_heading_t<double>> add_path_heading(const vpdd &init, double heading) {
-    std::vector<point_heading_t<double>> res;
-    for (const auto &p: init) {
-        res.emplace_back(p);
-        res.back().heading = heading;
-    }
-    return res;
-}
-
-std::vector<point_heading_t<double>> add_path_heading(const vpdd &init, double heading, double alt) {
-    auto res = add_path_heading(init, heading);
-    for (auto &p: res) {
-        p.z = alt;
-    }
-    return res;
-}
-
 
 namespace mstsp_solver {
+    vpdd remove_path_heading(const std::vector<point_heading_t<double>> &init) {
+        vpdd res;
+        for (const auto &p: init) {
+            res.emplace_back(p.x, p.y);
+        }
+        return res;
+    }
+
+    std::vector<point_heading_t<double>> add_path_heading(const vpdd &init, double heading) {
+        std::vector<point_heading_t<double>> res;
+        for (const auto &p: init) {
+            res.emplace_back(p);
+            res.back().heading = heading;
+        }
+        return res;
+    }
+
+    std::vector<point_heading_t<double>> add_path_heading(const vpdd &init, double heading, double alt) {
+        auto res = add_path_heading(init, heading);
+        for (auto &p: res) {
+            p.z = alt;
+        }
+        return res;
+    }
+
 
     MstspSolver::MstspSolver(SolverConfig config, const std::vector<MapPolygon> &decomposed_polygons,
                              EnergyCalculator energy_calculator,
@@ -83,7 +83,18 @@ namespace mstsp_solver {
 
     double MstspSolver::get_path_cost(const std::vector<Target> &path) const {
         double energy = get_path_energy(path);
-        return energy;
+        if (energy < m_config.soft_threshold_begin) {
+//            ROS_INFO_STREAM("Returning energy..." << std::endl);
+            return energy;
+        } else if (energy < m_config.soft_threshold_end) {
+//            ROS_INFO_STREAM("Returning soft..." << std::endl);
+            return energy * (1 + (energy - m_config.soft_threshold_begin) /
+                                 (m_config.soft_threshold_end - m_config.soft_threshold_begin) *
+                                 (m_config.coefficient_after_threshold - 1));
+        } else {
+//            ROS_INFO_STREAM("Returning large..." << std::endl);
+            return energy * m_config.coefficient_after_threshold;
+        }
     }
 
 
@@ -94,10 +105,14 @@ namespace mstsp_solver {
         for (const auto &uav_path: solution) {
             double path_cost = get_path_cost(uav_path);
             cost_sum += path_cost;
-            max_path_cost = std::max(max_path_cost, path_cost);
+
+            // TODO: replace this to make the enegy calculation be called only once
+            auto path_energy = get_path_energy(uav_path);
+            max_path_cost = std::max(max_path_cost, path_energy);
         }
 
-        return {max_path_cost, cost_sum};
+        return {cost_sum + 1.0 / static_cast<double>(m_config.n_uavs) + max_path_cost * m_config.max_energy_coefficient, cost_sum};
+//        return {cost_sum + 1.0 / static_cast<double>(m_config.n_uavs) * max_path_cost * m_minmax_scale, cost_sum};
     }
 
 

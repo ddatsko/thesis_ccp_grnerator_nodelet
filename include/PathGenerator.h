@@ -49,6 +49,7 @@ namespace path_generation {
         double m_drones_altitude;
         double m_unique_altitude_step;
         energy_calculator_config_t m_energy_config;
+        mstsp_solver::SolverConfig m_mstsp_solver_config;
 
 
         /* other parameters */
@@ -93,10 +94,11 @@ namespace path_generation {
          * @return Path that can be sent to the follower or trajectory generator to follow it
          */
         mrs_msgs::Path
-        _generate_path_for_simulation_one_drone(const std::vector<point_heading_t<double>> &points_to_visit,
-                                                point_t gps_transform_origin,
-                                                double optimal_speed = 1,
-                                                double horizontal_acceleration = 2.0);
+        _generate_path_for_simulation_one_drone(
+                const std::vector<mstsp_solver::point_heading_t<double>> &points_to_visit,
+                point_t gps_transform_origin,
+                double optimal_speed = 1,
+                double horizontal_acceleration = 2.0);
 
         /*!
          * Generate paths with max energy not more than max_energy_bound. Number of produced paths is greater or equal to the number of UAVs

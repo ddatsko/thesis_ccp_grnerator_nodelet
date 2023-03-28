@@ -227,7 +227,7 @@ namespace path_generation {
     }
 
     mrs_msgs::Path PathGenerator::_generate_path_for_simulation_one_drone(
-            const std::vector<point_heading_t<double>> &points_to_visit,
+            const std::vector<mstsp_solver::point_heading_t<double>> &points_to_visit,
             point_t gps_transform_origin,
             double optimal_speed,
             double horizontal_acceleration) {
@@ -288,9 +288,9 @@ namespace path_generation {
         auto best_initial_rotations = n_best_init_decomp_angles(polygon, m_number_of_rotations,
                                                                 static_cast<decomposition_type_t>(req.decomposition_method));
 
-        ROS_INFO_STREAM("Calculated best rotations: ");
+        ROS_INFO_STREAM("[PathGenerator]: Calculated best rotations: ");
         for (const auto &rot: best_initial_rotations) {
-            ROS_INFO_STREAM(rot);
+            ROS_INFO_STREAM("[PathGenerator]: " << rot);
         }
 
         // Run algorithm for each rotation and save the best result
@@ -330,8 +330,22 @@ namespace path_generation {
             mstsp_solver::SolverConfig solver_config{req.rotations_per_cell, req.sweeping_step, starting_point,
                                                      static_cast<size_t>(n_uavs), m_drones_altitude,
                                                      m_unique_altitude_step,
-                                                     req.no_improvement_cycles_before_stop};
-            solver_config.wall_distance = req.wall_distance;
+                                                     req.no_improvement_cycles_before_stop, req.wall_distance};
+
+            if (req.override_mstsp_solver_parameters) {
+                solver_config.soft_threshold_begin = req.mstsp_solver_soft_threshold_start;
+                solver_config.soft_threshold_end = req.mstsp_solver_soft_threshold_end;
+                solver_config.coefficient_after_threshold = req.mstsp_solver_coefficient_after_threshold;
+                solver_config.max_energy_coefficient = req.mstsp_solver_max_energy_coefficient;
+            } else {
+                // Add values from the default config
+                solver_config.soft_threshold_begin = m_mstsp_solver_config.soft_threshold_begin;
+                solver_config.soft_threshold_end = m_mstsp_solver_config.soft_threshold_end;
+                solver_config.coefficient_after_threshold = m_mstsp_solver_config.coefficient_after_threshold;
+                solver_config.max_energy_coefficient = m_mstsp_solver_config.max_energy_coefficient;
+            }
+
+//            solver_config.wall_distance = req.wall_distance;
             mstsp_solver::MstspSolver solver(solver_config, polygons_decomposed, energy_calculator,
                                              shortest_path_calculator);
             solver.set_logger(m_shared_logger);

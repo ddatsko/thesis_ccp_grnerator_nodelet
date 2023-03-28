@@ -16,6 +16,13 @@ best_speed_model:
   c1: 0.041122
   c2: 0.00053292
 
+
+mstsp_solver:
+  soft_threshold_start: 10000
+  soft_threshold_end: 15000
+  coefficient_after_threshold: 10
+  max_energy_coefficient: 5
+
 drone_mass: 0.9 # [kg]
 drone_area: 0.0215 # [m^2]
 average_acceleration: 10 # m/s^2
