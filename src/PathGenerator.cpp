@@ -285,8 +285,7 @@ namespace path_generation {
                                   std::pair<double, double> gps_transform_origin) {
         auto init_polygon = polygon;
         // TODO: make a parameter taken from message here as it directly influences the computation time
-        auto best_initial_rotations = n_best_init_decomp_angles(polygon, m_number_of_rotations,
-                                                                static_cast<decomposition_type_t>(req.decomposition_method));
+        auto best_initial_rotations = {req.decomposition_rotation};
 
         ROS_INFO_STREAM("[PathGenerator]: Calculated best rotations: ");
         for (const auto &rot: best_initial_rotations) {
@@ -327,7 +326,7 @@ namespace path_generation {
 
             // Create the configuration for MSTSP solver
             auto starting_point = gps_coordinates_to_meters({req.start_lat, req.start_lon}, gps_transform_origin);
-            mstsp_solver::SolverConfig solver_config{req.rotations_per_cell, req.sweeping_step, starting_point,
+            mstsp_solver::SolverConfig solver_config{req.decomposition_rotation, req.sweeping_step, starting_point,
                                                      static_cast<size_t>(n_uavs), m_drones_altitude,
                                                      m_unique_altitude_step,
                                                      req.no_improvement_cycles_before_stop, req.wall_distance};

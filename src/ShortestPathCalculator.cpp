@@ -209,6 +209,11 @@ std::vector<point_t> ShortestPathCalculator::shortest_path_between_polygon_nodes
 }
 
 std::vector<point_t> ShortestPathCalculator::shortest_path_between_points(point_t p1, point_t p2) const {
+    // !!!!!!!!!!!!!!!!!!!!
+    // WARNING! This is used just for Kelen's experiment as it is considered that there will be no no-fly zones and that
+    // UAVs can always reach each point by a straight line. The line below completely removes all the class functionality
+    // !!!!!!!!!!!!!!!!!!!!
+    return {p1, p2};
     // If path is saved to cache - return it from there
     auto path_in_cache = paths_cache.find({p1, p2});
     if (path_in_cache != paths_cache.end()) {

@@ -46,7 +46,7 @@ namespace mstsp_solver {
         for (size_t i = 0; i < decomposed_polygons.size(); ++i) {
             m_target_sets.emplace_back(i, decomposed_polygons[i], m_config.sweeping_step, m_config.wall_distance,
                                        m_energy_calculator,
-                                       m_config.rotations_per_cell);
+                                       std::vector<double>{m_config.rotation_angle, m_config.rotation_angle});
         }
     }
 
@@ -228,6 +228,35 @@ namespace mstsp_solver {
     final_solution_t MstspSolver::solve() const {
         m_logger->log_info("Solving started");
         _instance_solution_t init_solution = greedy_random();
+
+
+        bool all_small = true;
+        // Very unefficient piece of code
+        for (auto &uav_sol: init_solution) {
+            if (uav_sol.size() > 1) {
+                all_small = false;
+            }
+            if (uav_sol.size() != 1) {
+                continue;
+            }
+            auto best_target = uav_sol[0];
+            double best_path_cost = get_path_cost(uav_sol);
+            for (const auto &target: m_target_sets[uav_sol[0].target_set_index].targets) {
+                uav_sol[0] = target;
+                if (get_path_cost(uav_sol) < best_path_cost) {
+                    best_path_cost = get_path_cost(uav_sol);
+                    best_target = target;
+                }
+            }
+            uav_sol[0] = best_target;
+        }
+
+        if (all_small) {
+            auto best_solution_cost = get_solution_cost(init_solution);
+            return {best_solution_cost.max_path_cost, best_solution_cost.path_cost_sum, get_drones_paths(init_solution)};
+        }
+
+
         size_t nodes = 0;
         for (const auto &uav_path: init_solution) {
             nodes += uav_path.size();
