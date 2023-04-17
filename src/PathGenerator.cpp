@@ -18,6 +18,7 @@
 #include <thesis_path_generator/CalculateEnergy.h>
 #include "LoggerRos.h"
 #include <mrs_msgs/Path.h>
+#include <geometry_msgs/Polygon.h>
 
 namespace path_generation {
 
@@ -70,6 +71,7 @@ namespace path_generation {
         m_generate_paths_service_server = nh.advertiseService("/generate_paths",
                                                               &PathGenerator::callback_generate_paths, this);
         m_path_publisher = nh.advertise<mrs_msgs::Path>("path_generation/generated_path", 100);
+        m_fly_zone_publisher = nh.advertise<geometry_msgs::Polygon>("fly_zone", 100);
 
 
         m_shared_logger = std::make_shared<loggers::RosLogger>();
@@ -223,6 +225,9 @@ namespace path_generation {
             m_path_publisher.publish(generated_path);
             res.paths_gps[i] = generated_path;
         }
+
+        m_fly_zone_publisher.publish(req.fly_zone);
+
         return true;
     }
 

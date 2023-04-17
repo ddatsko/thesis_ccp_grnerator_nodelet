@@ -64,6 +64,7 @@ namespace path_generation {
         ros::ServiceServer m_calculate_energy_service_server;
         ros::ServiceServer m_generate_paths_service_server;
         ros::Publisher m_path_publisher;
+        ros::Publisher m_fly_zone_publisher;
 
         /*!
          * Callback function for ROS service for paths energy calculation
