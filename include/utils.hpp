@@ -4,6 +4,7 @@
 #include <tuple>
 #include <vector>
 #include "custom_types.hpp"
+#include <cmath>
 
 using hom_t = std::tuple<double, double, double>;
 

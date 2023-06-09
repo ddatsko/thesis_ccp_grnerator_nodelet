@@ -13,6 +13,8 @@
 #include "utils.hpp"
 #include <memory>
 #include <SimpleLogger.h>
+#include <optional>
+
 
 struct non_existing_point_error : public std::runtime_error {
     using runtime_error::runtime_error;
