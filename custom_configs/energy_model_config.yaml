@@ -22,5 +22,5 @@ average_acceleration: 10 # m/s^2
 propeller_radius: 0.119 # m
 number_of_propellers: 4
 allowed_path_deviation: 0.5 # m
-number_of_rotations: 5 # Number of initial rotations to try. The complexity will increase linearly with this term
+number_of_rotations: 3 # Number of initial rotations to try. The complexity will increase linearly with this term
 
